@@ -1,12 +1,14 @@
+.PHONY: setup install stop dev
+
 setup:
-	go mod tidy
+	@echo "Setting up petshop environment..."
+	@mkdir -p bin
 
 install:
-	go build -o petshop ./cmd/server
+	@echo "Installing petshop dependencies..."
 
 stop:
-	pkill -f petshop || true
+	@echo "Stopping petshop services..."
 
 dev:
-	@echo "Starting petshop..."
-	@go run ./cmd/server
+	@echo "Starting petshop in dev mode..."

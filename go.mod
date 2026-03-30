@@ -1,3 +1,3 @@
-module github.com/weibh/petshop
+module petshop
 
 go 1.21
