@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"petshop/internal/models"
@@ -20,9 +21,16 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 
 func GetPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	id := r.URL.Query().Get("id")
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		return
+	}
+	var targetID int64
+	fmt.Sscanf(idStr, "%d", &targetID)
 	for _, pet := range pets {
-		if pet.ID == 1 {
+		if pet.ID == targetID {
 			json.NewEncoder(w).Encode(pet)
 			return
 		}
