@@ -12,7 +12,16 @@ func main() {
 	fmt.Println("Project: petshop")
 
 	http.HandleFunc("/api/pets", handlers.ListPets)
-	http.HandleFunc("/api/pet", handlers.GetPet)
+	http.HandleFunc("/api/pet", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetPet(w, r)
+		case http.MethodDelete:
+			handlers.DeletePet(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
