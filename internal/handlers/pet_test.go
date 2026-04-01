@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"petshop/internal/models"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func resetPets() {
@@ -65,18 +67,12 @@ func TestListPets(t *testing.T) {
 
 			ListPets(w, req)
 
-			if w.Code != tt.wantStatusCode {
-				t.Errorf("ListPets() status = %d, want %d", w.Code, tt.wantStatusCode)
-			}
+			assert.Equal(t, tt.wantStatusCode, w.Code)
 
 			var pets []models.Pet
-			if err := json.NewDecoder(w.Body).Decode(&pets); err != nil {
-				t.Errorf("ListPets() failed to decode response: %v", err)
-			}
-
-			if len(pets) != tt.wantLen {
-				t.Errorf("ListPets() got %d pets, want %d", len(pets), tt.wantLen)
-			}
+			err := json.NewDecoder(w.Body).Decode(&pets)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantLen, len(pets))
 		})
 	}
 }
@@ -124,26 +120,19 @@ func TestGetPet(t *testing.T) {
 
 			GetPet(w, req)
 
-			if w.Code != tt.wantStatusCode {
-				t.Errorf("GetPet() status = %d, want %d", w.Code, tt.wantStatusCode)
-			}
+			assert.Equal(t, tt.wantStatusCode, w.Code)
 
 			if tt.wantErr {
 				var errResp map[string]string
-				if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
-					t.Errorf("GetPet() failed to decode error response: %v", err)
-				}
-				if _, ok := errResp["error"]; !ok {
-					t.Errorf("GetPet() expected error response, got none")
-				}
+				err := json.NewDecoder(w.Body).Decode(&errResp)
+				assert.NoError(t, err)
+				_, ok := errResp["error"]
+				assert.True(t, ok)
 			} else {
 				var pet models.Pet
-				if err := json.NewDecoder(w.Body).Decode(&pet); err != nil {
-					t.Errorf("GetPet() failed to decode pet: %v", err)
-				}
-				if pet.Name != tt.wantPetName {
-					t.Errorf("GetPet() got pet name = %s, want %s", pet.Name, tt.wantPetName)
-				}
+				err := json.NewDecoder(w.Body).Decode(&pet)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantPetName, pet.Name)
 			}
 		})
 	}
@@ -190,18 +179,14 @@ func TestDeletePet(t *testing.T) {
 
 			DeletePet(w, req)
 
-			if w.Code != tt.wantStatusCode {
-				t.Errorf("DeletePet() status = %d, want %d", w.Code, tt.wantStatusCode)
-			}
+			assert.Equal(t, tt.wantStatusCode, w.Code)
 
 			if tt.wantErr {
 				var errResp map[string]string
-				if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
-					t.Errorf("DeletePet() failed to decode error response: %v", err)
-				}
-				if _, ok := errResp["error"]; !ok {
-					t.Errorf("DeletePet() expected error response, got none")
-				}
+				err := json.NewDecoder(w.Body).Decode(&errResp)
+				assert.NoError(t, err)
+				_, ok := errResp["error"]
+				assert.True(t, ok)
 			}
 		})
 	}
@@ -253,18 +238,12 @@ func TestSearchPets(t *testing.T) {
 
 			SearchPets(w, req)
 
-			if w.Code != tt.wantStatusCode {
-				t.Errorf("SearchPets() status = %d, want %d", w.Code, tt.wantStatusCode)
-			}
+			assert.Equal(t, tt.wantStatusCode, w.Code)
 
 			var pets []models.Pet
-			if err := json.NewDecoder(w.Body).Decode(&pets); err != nil {
-				t.Errorf("SearchPets() failed to decode response: %v", err)
-			}
-
-			if len(pets) != tt.wantLen {
-				t.Errorf("SearchPets() got %d pets, want %d", len(pets), tt.wantLen)
-			}
+			err := json.NewDecoder(w.Body).Decode(&pets)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantLen, len(pets))
 		})
 	}
 }
@@ -324,27 +303,63 @@ func TestUpdatePet(t *testing.T) {
 
 			UpdatePet(w, req)
 
-			if w.Code != tt.wantStatusCode {
-				t.Errorf("UpdatePet() status = %d, want %d", w.Code, tt.wantStatusCode)
-			}
+			assert.Equal(t, tt.wantStatusCode, w.Code)
 
 			if tt.wantErr {
 				var errResp map[string]string
-				if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
-					t.Errorf("UpdatePet() failed to decode error response: %v", err)
-				}
-				if _, ok := errResp["error"]; !ok {
-					t.Errorf("UpdatePet() expected error response, got none")
-				}
+				err := json.NewDecoder(w.Body).Decode(&errResp)
+				assert.NoError(t, err)
+				_, ok := errResp["error"]
+				assert.True(t, ok)
 			} else {
 				var pet models.Pet
-				if err := json.NewDecoder(w.Body).Decode(&pet); err != nil {
-					t.Errorf("UpdatePet() failed to decode pet: %v", err)
-				}
-				if pet.Name != tt.wantPetName {
-					t.Errorf("UpdatePet() got pet name = %s, want %s", pet.Name, tt.wantPetName)
-				}
+				err := json.NewDecoder(w.Body).Decode(&pet)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantPetName, pet.Name)
 			}
 		})
 	}
+}
+
+func TestPetHandler(t *testing.T) {
+	t.Run("GET method should call GetPet", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/pet/1/photos", nil)
+		w := httptest.NewRecorder()
+
+		PetPhotoHandler(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	})
+
+	t.Run("POST method should call AddPetPhoto", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/pet/1/photos", strings.NewReader(`{"url":"newphoto.jpg"}`))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		PetPhotoHandler(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("DELETE method should call DeletePetPhoto", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/api/pet/1/photos?url=photo.jpg", nil)
+		w := httptest.NewRecorder()
+
+		PetPhotoHandler(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("unsupported method returns 405", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPatch, "/api/pet/1/photos", nil)
+		w := httptest.NewRecorder()
+
+		PetPhotoHandler(w, req)
+
+		assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+		assert.Contains(t, w.Header().Get("Allow"), "GET")
+		assert.Contains(t, w.Header().Get("Allow"), "POST")
+		assert.Contains(t, w.Header().Get("Allow"), "DELETE")
+	})
 }
