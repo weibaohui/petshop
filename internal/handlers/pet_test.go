@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"petshop/internal/models"
+	"petshop/internal/pagination"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -69,15 +70,26 @@ func TestListPets(t *testing.T) {
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
 
-			var pets []models.Pet
-			err := json.NewDecoder(w.Body).Decode(&pets)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.wantLen, len(pets))
+			var response pagination.PagedResponse
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+				t.Errorf("ListPets() failed to decode response: %v", err)
+			}
+
+			data, ok := response.Data.([]interface{})
+			if !ok {
+				t.Errorf("ListPets() response data is not an array")
+				return
+			}
+
+			if len(data) != tt.wantLen {
+				t.Errorf("ListPets() got %d pets, want %d", len(data), tt.wantLen)
+			}
 		})
 	}
 }
 
 func TestGetPet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -193,6 +205,7 @@ func TestDeletePet(t *testing.T) {
 }
 
 func TestSearchPets(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -240,15 +253,26 @@ func TestSearchPets(t *testing.T) {
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
 
-			var pets []models.Pet
-			err := json.NewDecoder(w.Body).Decode(&pets)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.wantLen, len(pets))
+			var response pagination.PagedResponse
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+				t.Errorf("SearchPets() failed to decode response: %v", err)
+			}
+
+			data, ok := response.Data.([]interface{})
+			if !ok {
+				t.Errorf("SearchPets() response data is not an array")
+				return
+			}
+
+			if len(data) != tt.wantLen {
+				t.Errorf("SearchPets() got %d pets, want %d", len(data), tt.wantLen)
+			}
 		})
 	}
 }
 
 func TestUpdatePet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -333,7 +357,7 @@ func TestPetHandler(t *testing.T) {
 	})
 
 	t.Run("POST method should call AddPetPhoto", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/pet/1/photos", strings.NewReader(`{"url":"newphoto.jpg"}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/pet/1/photos", strings.NewReader(`{"url":"http://example.com/photo.jpg"}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
