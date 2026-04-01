@@ -405,9 +405,6 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	petsMu.RLock()
-	defer petsMu.RUnlock()
-
 	for _, pet := range pets {
 		if pet.ID == targetID {
 			json.NewEncoder(w).Encode(pet.PhotoUrls)
