@@ -121,6 +121,7 @@ func init() {
 
 // ==================== 商品管理 ====================
 
+// ListProducts handles GET /api/admin/products and returns all products.
 func ListProducts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -134,6 +135,7 @@ func ListProducts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(productList)
 }
 
+// GetProduct handles GET /api/admin/product?id=<id> and returns the product.
 func GetProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -165,6 +167,7 @@ type CreateProductRequest struct {
 	Images      []string `json:"images"`
 }
 
+// CreateProduct handles POST /api/admin/products and creates a new product.
 func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -235,6 +238,7 @@ type UpdateProductRequest struct {
 	Images      []string `json:"images"`
 }
 
+// UpdateProduct handles PUT /api/admin/product and updates an existing product.
 func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -312,6 +316,7 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
+// DeleteProduct handles DELETE /api/admin/product?id=<id> and marks a product as deleted.
 func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -354,6 +359,7 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 // ==================== 库存管理 ====================
 
+// ListInventoryLogs handles GET /api/admin/inventory/logs and returns all inventory change logs.
 func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -361,6 +367,7 @@ func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(inventoryLogs)
 }
 
+// GetInventoryAlerts handles GET /api/admin/inventory/alerts and returns products with low stock.
 func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -385,6 +392,7 @@ type InventoryAdjustRequest struct {
 	Reason    string `json:"reason"`
 }
 
+// AdjustInventory handles POST /api/admin/inventory/adjust and adjusts product stock quantity.
 func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -439,6 +447,7 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 
 // ==================== 订单管理 ====================
 
+// ListOrders handles GET /api/admin/orders and returns all orders, optionally filtered by status.
 func ListOrders(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -454,6 +463,7 @@ func ListOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orderList)
 }
 
+// GetOrder handles GET /api/admin/order?id=<id> and returns the order.
 func GetOrder(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -481,6 +491,7 @@ type UpdateOrderStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// UpdateOrderStatus handles PUT /api/admin/order and updates the order status.
 func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -523,6 +534,7 @@ type RefundRequest struct {
 	Reason  string `json:"reason"`
 }
 
+// ProcessRefund handles POST /api/admin/order/refund and processes a refund for an order.
 func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -575,6 +587,7 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 
 // ==================== 用户管理 ====================
 
+// ListUsers handles GET /api/admin/users and returns all users.
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -586,6 +599,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userList)
 }
 
+// GetUser handles GET /api/admin/user?id=<id> and returns the user.
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -613,6 +627,7 @@ type UpdateUserStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// UpdateUserStatus handles PUT /api/admin/user and updates the user status.
 func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -648,6 +663,7 @@ type ResetPasswordRequest struct {
 	UserID int64 `json:"userId"`
 }
 
+// ResetUserPassword handles POST /api/admin/user/reset-password and resets the user password.
 func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -681,6 +697,8 @@ func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 
 // ==================== 销售统计 ====================
 
+// GetSalesStats handles GET /api/admin/stats/sales and returns sales statistics.
+// Query param 'period' can be: day (last 7 days), week (last 4 weeks), month (last 6 months).
 func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 	period := r.URL.Query().Get("period")
 	if period == "" {
@@ -724,6 +742,7 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(stats)
 }
 
+// calculateDayStat calculates sales statistics for a given date.
 func calculateDayStat(date string) models.SalesStat {
 	stat := models.SalesStat{Date: date}
 
@@ -739,6 +758,7 @@ func calculateDayStat(date string) models.SalesStat {
 	return stat
 }
 
+// calculatePeriodStat calculates sales statistics for a given date range.
 func calculatePeriodStat(start, end time.Time) models.SalesStat {
 	stat := models.SalesStat{Date: start.Format("2006-01-02")}
 
@@ -753,6 +773,7 @@ func calculatePeriodStat(start, end time.Time) models.SalesStat {
 	return stat
 }
 
+// getWeekStart returns the Monday of the week for the given time.
 func getWeekStart(t time.Time) time.Time {
 	weekday := int(t.Weekday())
 	if weekday == 0 {
@@ -761,6 +782,8 @@ func getWeekStart(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, time.Local)
 }
 
+// GetHotProducts handles GET /api/admin/stats/hot-products and returns top selling products.
+// Query param 'limit' sets the maximum number of products to return (default 10).
 func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10
@@ -829,6 +852,7 @@ func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 
 // ==================== 系统配置 ====================
 
+// ListCarousels handles GET /api/admin/carousels and returns all carousels.
 func ListCarousels(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -847,6 +871,7 @@ type CreateCarouselRequest struct {
 	Title     string `json:"title"`
 }
 
+// CreateCarousel handles POST /api/admin/carousels and creates a new carousel.
 func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -878,6 +903,7 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
+// UpdateCarousel handles PUT /api/admin/carousel and updates an existing carousel.
 func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -914,6 +940,7 @@ func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "carousel not found", http.StatusNotFound)
 }
 
+// DeleteCarousel handles DELETE /api/admin/carousel?id=<id> and deletes the carousel.
 func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -938,6 +965,7 @@ func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "carousel not found", http.StatusNotFound)
 }
 
+// ListAnnouncements handles GET /api/admin/announcements and returns all announcements.
 func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -954,6 +982,7 @@ type CreateAnnouncementRequest struct {
 	Content string `json:"content"`
 }
 
+// CreateAnnouncement handles POST /api/admin/announcements and creates a new announcement.
 func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -986,6 +1015,7 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a)
 }
 
+// UpdateAnnouncement handles PUT /api/admin/announcement and updates an existing announcement.
 func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -1019,6 +1049,7 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "announcement not found", http.StatusNotFound)
 }
 
+// DeleteAnnouncement handles DELETE /api/admin/announcement?id=<id> and deletes the announcement.
 func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -1043,6 +1074,7 @@ func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "announcement not found", http.StatusNotFound)
 }
 
+// GetSystemConfigs handles GET /api/admin/configs and returns all system configurations.
 func GetSystemConfigs(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -1059,6 +1091,8 @@ type SetSystemConfigRequest struct {
 	Value string `json:"value"`
 }
 
+// SetSystemConfig handles POST /api/admin/config and sets a system configuration value.
+// If the key is "inventory_threshold", it updates the inventory alert threshold.
 func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -1093,6 +1127,7 @@ func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "config updated"})
 }
 
+// abs returns the absolute value of x.
 func abs(x int) int {
 	if x < 0 {
 		return -x
