@@ -24,6 +24,7 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+	http.HandleFunc("/api/pet/search", handlers.SearchPets)
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
