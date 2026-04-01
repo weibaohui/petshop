@@ -20,6 +20,8 @@ var pets = []models.Pet{
 }
 
 func ListPets(w http.ResponseWriter, r *http.Request) {
+	petsMu.RLock()
+	defer petsMu.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	typeParam := r.URL.Query().Get("type")
 	if typeParam == "" {
@@ -42,6 +44,8 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetPet(w http.ResponseWriter, r *http.Request) {
+	petsMu.RLock()
+	defer petsMu.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -62,6 +66,8 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeletePet(w http.ResponseWriter, r *http.Request) {
+	petsMu.Lock()
+	defer petsMu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -89,6 +95,8 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 }
 
 func SearchPets(w http.ResponseWriter, r *http.Request) {
+	petsMu.RLock()
+	defer petsMu.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
 
@@ -110,18 +118,6 @@ func containsIgnoreCase(s, substr string) bool {
 	s = strings.ToLower(s)
 	substr = strings.ToLower(substr)
 	return strings.Contains(s, substr)
-}
-
-func PetHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		GetPet(w, r)
-	case http.MethodPut:
-		UpdatePet(w, r)
-	default:
-		w.Header().Set("Allow", "GET, PUT")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
 }
 
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
