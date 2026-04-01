@@ -51,6 +51,33 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+func DeletePet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		return
+	}
+	var targetID int64
+	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+	for i, pet := range pets {
+		if pet.ID == targetID {
+			deletedPet := pets[i]
+			pets = append(pets[:i], pets[i+1:]...)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(deletedPet)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
 func PetHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
