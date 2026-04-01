@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"petshop/internal/handlers"
 )
@@ -25,6 +26,23 @@ func main() {
 		}
 	})
 	http.HandleFunc("/api/pet/search", handlers.SearchPets)
+	http.HandleFunc("/api/pet/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if strings.HasSuffix(path, "/photos") {
+			handlers.PetPhotoHandler(w, r)
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetPet(w, r)
+		case http.MethodPut:
+			handlers.UpdatePet(w, r)
+		case http.MethodDelete:
+			handlers.DeletePet(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 
 	log.Println("Server starting on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

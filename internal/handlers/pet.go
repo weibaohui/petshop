@@ -41,7 +41,6 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewEncoder(w).Encode(filtered); err != nil {
 		http.Error(w, "encoding error", http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -191,4 +190,142 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
+func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		return
+	}
+	var targetID int64
+	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+
+	var req struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if req.URL == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "url is required"})
+		return
+	}
+
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
+	for i, pet := range pets {
+		if pet.ID == targetID {
+			for _, existingUrl := range pets[i].Photos {
+				if existingUrl == req.URL {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(pets[i].Photos)
+					return
+				}
+			}
+			pets[i].Photos = append(pets[i].Photos, req.URL)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(pets[i].Photos)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
+func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		return
+	}
+	var targetID int64
+	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+
+	urlStr := r.URL.Query().Get("url")
+	if urlStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "url parameter is required"})
+		return
+	}
+
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
+	for i, pet := range pets {
+		if pet.ID == targetID {
+			for j, p := range pets[i].Photos {
+				if p == urlStr {
+					pets[i].Photos = append(pets[i].Photos[:j], pets[i].Photos[j+1:]...)
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(pets[i].Photos)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(pets[i].Photos)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
+func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
+	if len(pathParts) < 4 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		return
+	}
+	var targetID int64
+	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+
+	for _, pet := range pets {
+		if pet.ID == targetID {
+			json.NewEncoder(w).Encode(pet.Photos)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
+func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		GetPetPhotos(w, r)
+	case http.MethodPost:
+		AddPetPhoto(w, r)
+	case http.MethodDelete:
+		DeletePetPhoto(w, r)
+	default:
+		w.Header().Set("Allow", "GET, POST, DELETE")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
 }
