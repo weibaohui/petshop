@@ -22,6 +22,10 @@ var pets = []models.Pet{
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	typeParam := r.URL.Query().Get("type")
+
+	petsMu.RLock()
+	defer petsMu.RUnlock()
+
 	if typeParam == "" {
 		if err := json.NewEncoder(w).Encode(pets); err != nil {
 			http.Error(w, "encoding error", http.StatusInternalServerError)
@@ -51,6 +55,10 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	}
 	var targetID int64
 	fmt.Sscanf(idStr, "%d", &targetID)
+
+	petsMu.RLock()
+	defer petsMu.RUnlock()
+
 	for _, pet := range pets {
 		if pet.ID == targetID {
 			json.NewEncoder(w).Encode(pet)
@@ -75,6 +83,10 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
+
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
 	for i, pet := range pets {
 		if pet.ID == targetID {
 			deletedPet := pets[i]
@@ -91,6 +103,9 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 func SearchPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
+
+	petsMu.RLock()
+	defer petsMu.RUnlock()
 
 	if nameParam == "" {
 		json.NewEncoder(w).Encode(pets)
