@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"strings"
 
 	"petshop/internal/models"
 )
@@ -22,16 +23,22 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	typeParam := r.URL.Query().Get("type")
 	if typeParam == "" {
-		json.NewEncoder(w).Encode(pets)
+		if err := json.NewEncoder(w).Encode(pets); err != nil {
+			http.Error(w, "encoding error", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 	filtered := []models.Pet{}
 	for _, pet := range pets {
-		if pet.Type == typeParam {
+		if strings.EqualFold(pet.Type, typeParam) {
 			filtered = append(filtered, pet)
 		}
 	}
-	json.NewEncoder(w).Encode(filtered)
+	if err := json.NewEncoder(w).Encode(filtered); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func GetPet(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +86,30 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
+
+func SearchPets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	nameParam := r.URL.Query().Get("name")
+
+	if nameParam == "" {
+		json.NewEncoder(w).Encode(pets)
+		return
+	}
+
+	filtered := []models.Pet{}
+	for _, pet := range pets {
+		if containsIgnoreCase(pet.Name, nameParam) {
+			filtered = append(filtered, pet)
+		}
+	}
+	json.NewEncoder(w).Encode(filtered)
+}
+
+func containsIgnoreCase(s, substr string) bool {
+	s = strings.ToLower(s)
+	substr = strings.ToLower(substr)
+	return strings.Contains(s, substr)
 }
 
 func PetHandler(w http.ResponseWriter, r *http.Request) {
