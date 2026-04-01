@@ -16,7 +16,18 @@ var pets = []models.Pet{
 
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pets)
+	typeParam := r.URL.Query().Get("type")
+	if typeParam == "" {
+		json.NewEncoder(w).Encode(pets)
+		return
+	}
+	filtered := []models.Pet{}
+	for _, pet := range pets {
+		if pet.Type == typeParam {
+			filtered = append(filtered, pet)
+		}
+	}
+	json.NewEncoder(w).Encode(filtered)
 }
 
 func GetPet(w http.ResponseWriter, r *http.Request) {
