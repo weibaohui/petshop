@@ -153,6 +153,33 @@ func main() {
 	http.HandleFunc("/api/admin/stats/sales", handlers.GetSalesStats)
 	http.HandleFunc("/api/admin/stats/hot-products", handlers.GetHotProducts)
 
+	// ==================== 购物车管理 ====================
+	http.HandleFunc("/api/cart", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetCart(w, r)
+		case http.MethodPost:
+			handlers.AddToCart(w, r)
+		case http.MethodPut:
+			handlers.UpdateCartItem(w, r)
+		case http.MethodDelete:
+			handlers.DeleteCartItem(w, r)
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Allow", "GET, POST, PUT, DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+	http.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			handlers.ClearCart(w, r)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Allow", "DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	// ==================== 系统配置 ====================
 	// 轮播图管理
 	http.HandleFunc("/api/admin/carousels", func(w http.ResponseWriter, r *http.Request) {
