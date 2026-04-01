@@ -14,9 +14,9 @@ import (
 
 func resetPets() {
 	pets = []models.Pet{
-		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
-		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
-		{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+		{ID: 1, Name: "Buddy", Type: "Dog", Photos: []string{"url1"}, Status: "available"},
+		{ID: 2, Name: "Whiskers", Type: "Cat", Photos: []string{"url2"}, Status: "available"},
+		{ID: 3, Name: "Goldie", Type: "Fish", Photos: []string{"url3"}, Status: "available"},
 	}
 }
 
