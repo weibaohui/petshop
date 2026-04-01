@@ -126,18 +126,6 @@ func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-func PetHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		GetPet(w, r)
-	case http.MethodPut:
-		UpdatePet(w, r)
-	default:
-		w.Header().Set("Allow", "GET, PUT")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
-}
-
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
