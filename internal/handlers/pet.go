@@ -19,6 +19,8 @@ var pets = []models.Pet{
 	{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
 }
 
+// ListPets handles GET /api/pets and returns all pets, optionally filtered by type.
+// It acquires a read lock for thread-safe access to the pets slice.
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	typeParam := r.URL.Query().Get("type")
@@ -44,6 +46,8 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetPet handles GET /api/pet?id=<id> and returns the pet with the specified ID.
+// Returns 400 if id is missing, and 404 if the pet is not found.
 func GetPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -68,6 +72,8 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// DeletePet handles DELETE /api/pet?id=<id> and removes the pet with the specified ID.
+// Returns 400 if id is missing or invalid, and 404 if the pet is not found.
 func DeletePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -99,6 +105,8 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// SearchPets handles GET /api/pet/search?name=<name> and returns pets matching the name.
+// If name is empty, returns all pets. Search is case-insensitive.
 func SearchPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
@@ -120,12 +128,15 @@ func SearchPets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(filtered)
 }
 
+// containsIgnoreCase checks if s contains substr, case-insensitively.
 func containsIgnoreCase(s, substr string) bool {
 	s = strings.ToLower(s)
 	substr = strings.ToLower(substr)
 	return strings.Contains(s, substr)
 }
 
+// UpdatePet handles PUT /api/pet and updates an existing pet's information.
+// It validates required fields (id, name) and updates only non-empty fields.
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -180,6 +191,8 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// AddPetPhoto handles POST /api/pet/<id>/photos and adds a photo URL to the pet.
+// If the URL already exists, it removes the existing one (toggle behavior).
 func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -234,6 +247,7 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// DeletePetPhoto handles DELETE /api/pet/<id>/photos?url=<url> and removes a photo URL from the pet.
 func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -279,6 +293,7 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// GetPetPhotos handles GET /api/pet/<id>/photos and returns the photo URLs of the pet.
 func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -308,6 +323,8 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
+// PetPhotoHandler handles GET, POST, DELETE for /api/pet/<id>/photos endpoints.
+// It delegates to GetPetPhotos, AddPetPhoto, and DeletePetPhoto respectively.
 func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
