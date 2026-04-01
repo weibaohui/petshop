@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"strings"
 
 	"petshop/internal/models"
 )
+
+var petsMu sync.RWMutex
 
 var pets = []models.Pet{
 	{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
@@ -116,6 +119,7 @@ func PetHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		UpdatePet(w, r)
 	default:
+		w.Header().Set("Allow", "GET, PUT")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
@@ -129,7 +133,6 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
-	defer r.Body.Close()
 
 	var pet models.Pet
 	if err := json.Unmarshal(body, &pet); err != nil {
@@ -150,7 +153,9 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found := false
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
 	for i, p := range pets {
 		if p.ID == pet.ID {
 			pets[i].Name = pet.Name
@@ -163,15 +168,12 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			if pet.Status != "" {
 				pets[i].Status = pet.Status
 			}
-			found = true
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(pets[i])
 			return
 		}
 	}
 
-	if !found {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
-	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
