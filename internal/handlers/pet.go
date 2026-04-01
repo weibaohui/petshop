@@ -281,6 +281,9 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	petsMu.RLock()
+	defer petsMu.RUnlock()
+
 	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
