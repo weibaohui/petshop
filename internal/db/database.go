@@ -8,21 +8,27 @@ import (
 )
 
 var (
-	db   *sql.DB
-	once sync.Once
+	db       *sql.DB
+	once     sync.Once
+	initErr  error
+	initDone bool
 )
 
 // InitDB initializes the database connection
 func InitDB(dbPath string) error {
-	var err error
 	once.Do(func() {
-		db, err = sql.Open("sqlite3", dbPath)
-		if err != nil {
+		db, initErr = sql.Open("sqlite3", dbPath)
+		if initErr != nil {
+			initDone = true
 			return
 		}
-		err = createTables()
+		initErr = createTables()
+		initDone = true
 	})
-	return err
+	if !initDone || initErr != nil {
+		return initErr
+	}
+	return nil
 }
 
 // GetDB returns the database instance

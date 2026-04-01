@@ -73,26 +73,34 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 	product, exists := products[req.ProductID]
 	dataMu.RUnlock()
 
-	if !exists || product.Status == "deleted" {
+	if !exists || product.Status != "on_sale" {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
-	// Verify stock
-	if product.Stock < req.Quantity {
+	// Verify stock - consider existing cart quantity
+	dataMu.RLock()
+	existingQty := getExistingCartQuantity(userID, req.ProductID)
+	dataMu.RUnlock()
+	if product.Stock < req.Quantity+existingQty {
 		http.Error(w, "insufficient stock", http.StatusBadRequest)
 		return
 	}
 
 	// Use authoritative product name and price from server (issue #2)
 	repo := db.NewCartRepository()
-	item, err := repo.AddCartItem(userID, req.ProductID, product.Name, product.Price, req.Quantity)
+	_, err := repo.AddCartItem(userID, req.ProductID, product.Name, product.Price, req.Quantity)
 	if err != nil {
 		http.Error(w, "failed to add item to cart", http.StatusInternalServerError)
 		return
 	}
 
-	items := []*models.CartItem{item}
+	// Return full cart
+	items, err := repo.GetCartItems(userID)
+	if err != nil {
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
+		return
+	}
 	cart := calculateCart(userID, items)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -150,11 +158,12 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	product, exists := products[itemToUpdate.ProductID]
 	dataMu.RUnlock()
 
-	if !exists || product.Status == "deleted" {
+	if !exists || product.Status != "on_sale" {
 		http.Error(w, "product no longer available", http.StatusBadRequest)
 		return
 	}
 
+	// Stock check: the new quantity should be available (not added to existing since we're replacing)
 	if product.Stock < req.Quantity {
 		http.Error(w, "insufficient stock", http.StatusBadRequest)
 		return
@@ -223,9 +232,10 @@ func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete items
-	for _, itemID := range req.ItemIDs {
-		repo.RemoveCartItem(userID, itemID)
+	// Delete items atomically
+	if err := repo.RemoveCartItems(userID, req.ItemIDs); err != nil {
+		http.Error(w, "failed to delete items", http.StatusInternalServerError)
+		return
 	}
 
 	// Get remaining items
@@ -327,4 +337,14 @@ func parseInt(s string, target *int64) (int, error) {
 	}
 	*target = n
 	return len(s), nil
+}
+
+// getExistingCartQuantity gets the quantity of a product already in user's cart
+func getExistingCartQuantity(userID, productID int64) int {
+	repo := db.NewCartRepository()
+	item, err := repo.GetCartItemByProductID(userID, productID)
+	if err != nil {
+		return 0
+	}
+	return item.Quantity
 }

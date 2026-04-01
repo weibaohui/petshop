@@ -42,37 +42,43 @@ func (r *CartRepository) GetCartItems(userID int64) ([]*models.CartItem, error) 
 	return items, rows.Err()
 }
 
-// AddCartItem adds a new cart item or updates quantity if exists
+// AddCartItem adds a new cart item or updates quantity if exists (atomic upsert)
 func (r *CartRepository) AddCartItem(userID, productID int64, productName string, price float64, quantity int) (*models.CartItem, error) {
 	now := time.Now()
 
-	// Check if item already exists
-	var existingID int64
-	err := r.db.QueryRow(`SELECT id FROM cart_items WHERE user_id = ? AND product_id = ?`, userID, productID).Scan(&existingID)
-
-	if err == nil {
-		// Update existing item quantity
-		_, err = r.db.Exec(`
-			UPDATE cart_items SET quantity = quantity + ?, updated_at = ? WHERE id = ?`,
-			quantity, now, existingID)
-		if err != nil {
-			return nil, err
-		}
-		return r.GetCartItemByID(existingID)
-	} else if err == sql.ErrNoRows {
-		// Insert new item
-		result, err := r.db.Exec(`
-			INSERT INTO cart_items (user_id, product_id, product_name, price, quantity, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			userID, productID, productName, price, quantity, now, now)
-		if err != nil {
-			return nil, err
-		}
-		id, _ := result.LastInsertId()
-		return r.GetCartItemByID(id)
+	// Use atomic upsert with INSERT ... ON CONFLICT
+	result, err := r.db.Exec(`
+		INSERT INTO cart_items (user_id, product_id, product_name, price, quantity, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(user_id, product_id) DO UPDATE SET
+			quantity = quantity + excluded.quantity,
+			updated_at = excluded.updated_at`,
+		userID, productID, productName, price, quantity, now, now)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, err
+	id, _ := result.LastInsertId()
+	// If LastInsertId returns 0 (some drivers don't support it), query by user_id + product_id
+	if id == 0 {
+		return r.GetCartItemByProductID(userID, productID)
+	}
+	return r.GetCartItemByID(id)
+}
+
+// GetCartItemByProductID returns a cart item by user ID and product ID
+func (r *CartRepository) GetCartItemByProductID(userID, productID int64) (*models.CartItem, error) {
+	item := &models.CartItem{}
+	err := r.db.QueryRow(`
+		SELECT id, user_id, product_id, product_name, price, quantity, created_at, updated_at
+		FROM cart_items WHERE user_id = ? AND product_id = ?`, userID, productID).
+		Scan(&item.ID, &item.UserID, &item.ProductID, &item.ProductName,
+			&item.Price, &item.Quantity, &item.CreatedAt, &item.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	item.Subtotal = item.Price * float64(item.Quantity)
+	return item, nil
 }
 
 // GetCartItemByID returns a cart item by ID
@@ -106,5 +112,24 @@ func (r *CartRepository) RemoveCartItem(userID, itemID int64) error {
 // ClearCart removes all cart items for a user
 func (r *CartRepository) ClearCart(userID int64) error {
 	_, err := r.db.Exec(`DELETE FROM cart_items WHERE user_id = ?`, userID)
+	return err
+}
+
+// RemoveCartItems atomically removes multiple cart items by their IDs
+func (r *CartRepository) RemoveCartItems(userID int64, itemIDs []int64) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	query := `DELETE FROM cart_items WHERE user_id = ? AND id IN (`
+	args := []interface{}{userID}
+	for i, id := range itemIDs {
+		if i > 0 {
+			query += ","
+		}
+		query += "?"
+		args = append(args, id)
+	}
+	query += ")"
+	_, err := r.db.Exec(query, args...)
 	return err
 }

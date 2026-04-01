@@ -3,8 +3,9 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // UserIDKey is the context key for user ID
@@ -12,7 +13,13 @@ type contextKey string
 
 const UserIDKey contextKey = "userID"
 
-// AuthMiddleware validates session/JWT and extracts user ID
+// JWTClaims represents the JWT claims structure
+type JWTClaims struct {
+	UserID int64 `json:"userId"`
+	jwt.RegisteredClaims
+}
+
+// AuthMiddleware validates JWT token and extracts user ID
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get Authorization header
@@ -23,41 +30,42 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Extract token (support both "Bearer <token>" and raw token)
-		token := strings.TrimPrefix(authHeader, "Bearer ")
-		if token == authHeader && !strings.Contains(authHeader, " ") {
-			token = authHeader
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader && !strings.Contains(authHeader, " ") {
+			tokenString = authHeader
 		}
 
-		// Parse user ID from token (in real app, validate JWT signature)
-		// For this implementation, token format: "user_<userID>" or just the userID
-		var userID int64
+		// Parse and validate JWT token
+		// In production, use a proper secret key from config/environment
+		secretKey := []byte("your-256-bit-secret-key-here")
 
-		if strings.HasPrefix(token, "user_") {
-			idStr := strings.TrimPrefix(token, "user_")
-			var err error
-			userID, err = strconv.ParseInt(idStr, 10, 64)
-			if err != nil {
-				http.Error(w, "unauthorized: invalid token format", http.StatusUnauthorized)
-				return
+		token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+			// Validate signing method
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
 			}
-		} else {
-			// Try parsing as direct user ID
-			var err error
-			userID, err = strconv.ParseInt(token, 10, 64)
-			if err != nil {
-				http.Error(w, "unauthorized: invalid token", http.StatusUnauthorized)
-				return
-			}
+			return secretKey, nil
+		})
+
+		if err != nil {
+			http.Error(w, "unauthorized: invalid token", http.StatusUnauthorized)
+			return
 		}
 
-		// Validate user exists
-		if userID <= 0 {
+		claims, ok := token.Claims.(*JWTClaims)
+		if !ok || !token.Valid {
+			http.Error(w, "unauthorized: invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		// Validate user ID
+		if claims.UserID <= 0 {
 			http.Error(w, "unauthorized: invalid user ID", http.StatusUnauthorized)
 			return
 		}
 
 		// Add user ID to request context
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -66,4 +74,17 @@ func AuthMiddleware(next http.Handler) http.Handler {
 func GetUserID(ctx context.Context) (int64, bool) {
 	userID, ok := ctx.Value(UserIDKey).(int64)
 	return userID, ok
+}
+
+// GenerateToken generates a JWT token for a user (utility for testing)
+func GenerateToken(userID int64) (string, error) {
+	secretKey := []byte("your-256-bit-secret-key-here")
+	claims := &JWTClaims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer: "petshop",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
 }
