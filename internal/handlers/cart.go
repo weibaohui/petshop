@@ -2,270 +2,297 @@ package handlers
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
-	"sync"
 	"time"
 
+	"petshop/internal/db"
+	"petshop/internal/middleware"
 	"petshop/internal/models"
 )
 
-var cartMu sync.RWMutex
+// Cart handlers use database for persistence and get user ID from context
 
-// Cart storage - in production this would be a database
-// Map from userID to cart items
-var userCarts = map[int64][]models.CartItem{}
-var cartItemIDCounter int64 = 1
+type AddToCartRequest struct {
+	ProductID int64 `json:"productId"`
+	Quantity  int   `json:"quantity"`
+}
 
-// GetCart handles GET /api/cart?userId=<userId> and returns the user's cart
+type UpdateCartItemRequest struct {
+	ItemID   int64 `json:"itemId"`
+	Quantity int   `json:"quantity"`
+}
+
+type DeleteCartItemRequest struct {
+	ItemIDs []int64 `json:"itemIds"`
+}
+
+// GetCart handles GET /api/cart and returns the user's cart
 func GetCart(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	userID, err := parseUserID(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: err.Error()})
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	cartMu.RLock()
-	items := userCarts[userID]
-	cartMu.RUnlock()
+	repo := db.NewCartRepository()
+	items, err := repo.GetCartItems(userID)
+	if err != nil {
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
+		return
+	}
 
 	cart := calculateCart(userID, items)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart retrieved", Cart: cart})
 }
 
-// AddToCart handles POST /api/cart and adds an item to the user's cart
+// AddToCart handles POST /api/cart and adds an item to the cart
 func AddToCart(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid request body"})
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var req models.AddToCartRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid JSON format"})
+	var req AddToCartRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if req.UserID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "userId is required"})
+	if req.ProductID <= 0 {
+		http.Error(w, "productId is required", http.StatusBadRequest)
 		return
 	}
-
-	if req.ProductID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "productId is required"})
-		return
-	}
-
 	if req.Quantity <= 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "quantity must be greater than 0"})
+		req.Quantity = 1
+	}
+
+	// Get product from server data to verify price (issue #2: price verification)
+	dataMu.RLock()
+	product, exists := products[req.ProductID]
+	dataMu.RUnlock()
+
+	if !exists || product.Status == "deleted" {
+		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
-	cartMu.Lock()
-	defer cartMu.Unlock()
-
-	items := userCarts[req.UserID]
-
-	// Check if product already exists in cart
-	for i, item := range items {
-		if item.ProductID == req.ProductID {
-			items[i].Quantity += req.Quantity
-			items[i].Subtotal = items[i].Price * float64(items[i].Quantity)
-			items[i].UpdatedAt = time.Now()
-			userCarts[req.UserID] = items
-			cart := calculateCart(req.UserID, items)
-			json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Item quantity updated", Cart: cart})
-			return
-		}
+	// Verify stock
+	if product.Stock < req.Quantity {
+		http.Error(w, "insufficient stock", http.StatusBadRequest)
+		return
 	}
 
-	// Add new item
-	newItem := models.CartItem{
-		ID:          cartItemIDCounter,
-		UserID:      req.UserID,
-		ProductID:   req.ProductID,
-		ProductName: req.ProductName,
-		Price:       req.Price,
-		Quantity:    req.Quantity,
-		Subtotal:    req.Price * float64(req.Quantity),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	// Use authoritative product name and price from server (issue #2)
+	repo := db.NewCartRepository()
+	item, err := repo.AddCartItem(userID, req.ProductID, product.Name, product.Price, req.Quantity)
+	if err != nil {
+		http.Error(w, "failed to add item to cart", http.StatusInternalServerError)
+		return
 	}
-	cartItemIDCounter++
-	userCarts[req.UserID] = append(items, newItem)
 
-	cart := calculateCart(req.UserID, userCarts[req.UserID])
+	items := []*models.CartItem{item}
+	cart := calculateCart(userID, items)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Item added to cart", Cart: cart})
 }
 
-// UpdateCartItem handles PUT /api/cart and updates the quantity of an item
+// UpdateCartItem handles PUT /api/cart and updates a cart item quantity
 func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid request body"})
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var req models.UpdateCartItemRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid JSON format"})
+	var req UpdateCartItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if req.UserID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "userId is required"})
+	if req.ItemID <= 0 {
+		http.Error(w, "itemId is required", http.StatusBadRequest)
 		return
 	}
-
-	if req.ID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "id is required"})
-		return
-	}
-
 	if req.Quantity <= 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "quantity must be greater than 0"})
+		http.Error(w, "quantity must be positive", http.StatusBadRequest)
 		return
 	}
 
-	cartMu.Lock()
-	defer cartMu.Unlock()
+	repo := db.NewCartRepository()
 
-	items := userCarts[req.UserID]
-	found := false
+	// Verify the item belongs to the user
+	cartItems, err := repo.GetCartItems(userID)
+	if err != nil {
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
+		return
+	}
 
-	for i, item := range items {
-		if item.ID == req.ID {
-			items[i].Quantity = req.Quantity
-			items[i].Subtotal = items[i].Price * float64(req.Quantity)
-			items[i].UpdatedAt = time.Now()
-			found = true
+	var itemToUpdate *models.CartItem
+	for _, item := range cartItems {
+		if item.ID == req.ItemID {
+			itemCopy := *item
+			itemToUpdate = &itemCopy
 			break
 		}
 	}
 
-	if !found {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Cart item not found"})
+	if itemToUpdate == nil {
+		http.Error(w, "cart item not found", http.StatusNotFound)
 		return
 	}
 
-	userCarts[req.UserID] = items
-	cart := calculateCart(req.UserID, items)
+	// Verify stock for the product
+	dataMu.RLock()
+	product, exists := products[itemToUpdate.ProductID]
+	dataMu.RUnlock()
+
+	if !exists || product.Status == "deleted" {
+		http.Error(w, "product no longer available", http.StatusBadRequest)
+		return
+	}
+
+	if product.Stock < req.Quantity {
+		http.Error(w, "insufficient stock", http.StatusBadRequest)
+		return
+	}
+
+	// Update quantity
+	if err := repo.UpdateCartItemQuantity(userID, req.ItemID, req.Quantity); err != nil {
+		http.Error(w, "failed to update cart", http.StatusInternalServerError)
+		return
+	}
+
+	updatedItem, err := repo.GetCartItemByID(req.ItemID)
+	if err != nil {
+		http.Error(w, "failed to get updated item", http.StatusInternalServerError)
+		return
+	}
+
+	items := []*models.CartItem{updatedItem}
+	cart := calculateCart(userID, items)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart item updated", Cart: cart})
 }
 
 // DeleteCartItem handles DELETE /api/cart and removes items from the cart
 func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-	body, err := io.ReadAll(r.Body)
+	var req DeleteCartItemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.ItemIDs) == 0 {
+		http.Error(w, "itemIds is required and must not be empty", http.StatusBadRequest)
+		return
+	}
+
+	repo := db.NewCartRepository()
+
+	// Verify items belong to the user
+	cartItems, err := repo.GetCartItems(userID)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid request body"})
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
 		return
 	}
 
-	var req models.DeleteCartItemRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "Invalid JSON format"})
-		return
-	}
-
-	if req.UserID == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "userId is required"})
-		return
-	}
-
-	if len(req.IDs) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: "ids is required and must not be empty"})
-		return
-	}
-
-	cartMu.Lock()
-	defer cartMu.Unlock()
-
-	items := userCarts[req.UserID]
-
-	// Create a map for quick lookup
 	idMap := make(map[int64]bool)
-	for _, id := range req.IDs {
+	for _, id := range req.ItemIDs {
 		idMap[id] = true
 	}
 
-	// Filter out items to delete
-	filtered := make([]models.CartItem, 0, len(items))
-	for _, item := range items {
-		if !idMap[item.ID] {
-			filtered = append(filtered, item)
+	foundCount := 0
+	for _, item := range cartItems {
+		if idMap[item.ID] {
+			foundCount++
 		}
 	}
 
-	userCarts[req.UserID] = filtered
-	cart := calculateCart(req.UserID, filtered)
+	if foundCount == 0 {
+		http.Error(w, "cart items not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete items
+	for _, itemID := range req.ItemIDs {
+		repo.RemoveCartItem(userID, itemID)
+	}
+
+	// Get remaining items
+	remainingItems, err := repo.GetCartItems(userID)
+	if err != nil {
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
+		return
+	}
+
+	cart := calculateCart(userID, remainingItems)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Items deleted", Cart: cart})
 }
 
 // ClearCart handles DELETE /api/cart/clear and removes all items from the user's cart
 func ClearCart(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	userID, err := parseUserID(r)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.CartResponse{Success: false, Message: err.Error()})
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	cartMu.Lock()
-	defer cartMu.Unlock()
+	repo := db.NewCartRepository()
+	if err := repo.ClearCart(userID); err != nil {
+		http.Error(w, "failed to clear cart", http.StatusInternalServerError)
+		return
+	}
 
-	delete(userCarts, userID)
-
-	cart := calculateCart(userID, []models.CartItem{})
+	cart := calculateCart(userID, []*models.CartItem{})
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart cleared", Cart: cart})
 }
 
-// calculateCart calculates total price and total items for a cart
-func calculateCart(userID int64, items []models.CartItem) *models.Cart {
+// calculateCart calculates total price and total items for a cart (issue #4: full data copy)
+func calculateCart(userID int64, items []*models.CartItem) *models.Cart {
 	var totalPrice float64
 	var totalItems int
 
+	// Create full independent copies of items for concurrency safety (issue #4)
+	copiedItems := make([]models.CartItem, 0, len(items))
 	for _, item := range items {
-		totalPrice += item.Subtotal
-		totalItems += item.Quantity
+		itemCopy := models.CartItem{
+			ID:          item.ID,
+			UserID:      item.UserID,
+			ProductID:   item.ProductID,
+			ProductName: item.ProductName,
+			Price:       item.Price,
+			Quantity:    item.Quantity,
+			Subtotal:    item.Price * float64(item.Quantity),
+			CreatedAt:   item.CreatedAt,
+			UpdatedAt:   item.UpdatedAt,
+		}
+		copiedItems = append(copiedItems, itemCopy)
+		totalPrice += itemCopy.Subtotal
+		totalItems += itemCopy.Quantity
 	}
 
 	return &models.Cart{
 		UserID:     userID,
-		Items:      items,
+		Items:      copiedItems,
 		TotalPrice: totalPrice,
 		TotalItems: totalItems,
 		UpdatedAt:  time.Now(),
 	}
 }
 
-// parseUserID extracts userID from query parameters
+// parseUserID is kept for backwards compatibility but handlers should use context
 func parseUserID(r *http.Request) (int64, error) {
 	userIDStr := r.URL.Query().Get("userId")
 	if userIDStr == "" {

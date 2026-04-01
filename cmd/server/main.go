@@ -6,11 +6,19 @@ import (
 	"net/http"
 	"strings"
 
+	"petshop/internal/db"
 	"petshop/internal/handlers"
+	"petshop/internal/middleware"
 )
 
 func main() {
 	fmt.Println("Project: petshop")
+
+	// Initialize database for cart persistence (issue #3)
+	if err := db.InitDB("./cart.db"); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
 
 	http.HandleFunc("/api/pets", handlers.ListPets)
 	http.HandleFunc("/api/pet", func(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +162,8 @@ func main() {
 	http.HandleFunc("/api/admin/stats/hot-products", handlers.GetHotProducts)
 
 	// ==================== 购物车管理 ====================
-	http.HandleFunc("/api/cart", func(w http.ResponseWriter, r *http.Request) {
+	// Apply auth middleware to protect cart endpoints (issue #1)
+	cartHandler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetCart(w, r)
@@ -169,10 +178,14 @@ func main() {
 			w.Header().Set("Allow", "GET, POST, PUT, DELETE")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	}))
+	http.Handle("/api/cart", cartHandler)
+	http.Handle("/api/cart/", cartHandler)
+
+	// Clear cart endpoint
 	http.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
-			handlers.ClearCart(w, r)
+			cartHandler.ServeHTTP(w, r)
 		} else {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Allow", "DELETE")
