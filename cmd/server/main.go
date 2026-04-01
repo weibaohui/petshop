@@ -16,6 +16,8 @@ func main() {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetPet(w, r)
+		case http.MethodPut:
+			handlers.UpdatePet(w, r)
 		case http.MethodDelete:
 			handlers.DeletePet(w, r)
 		default:
