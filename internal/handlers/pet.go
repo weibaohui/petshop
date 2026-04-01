@@ -53,7 +53,11 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var targetID int64
-	fmt.Sscanf(idStr, "%d", &targetID)
+	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
 
 	petsMu.RLock()
 	defer petsMu.RUnlock()
@@ -90,7 +94,6 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 		if pet.ID == targetID {
 			deletedPet := pets[i]
 			pets = append(pets[:i], pets[i+1:]...)
-			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(deletedPet)
 			return
 		}

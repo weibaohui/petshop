@@ -22,6 +22,7 @@ func main() {
 		case http.MethodDelete:
 			handlers.DeletePet(w, r)
 		default:
+			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Allow", "GET, PUT, DELETE")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
