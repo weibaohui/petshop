@@ -7,47 +7,75 @@ import (
 	"net/http"
 	"sync"
 	"strings"
+	"time"
 
+	"petshop/internal/cache"
+	"petshop/internal/logger"
+	"petshop/internal/middleware"
 	"petshop/internal/models"
+	"petshop/internal/pagination"
+	"petshop/internal/validator"
 )
 
-var petsMu sync.RWMutex
+var (
+	petsMu    sync.RWMutex
+	pets      = []models.Pet{
+		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
+		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
+		{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+	}
+	petCache  *cache.PetCache
+	csrfProt  *middleware.CSRFProtection
+	petLogger = logger.New("handlers")
+)
 
-var pets = []models.Pet{
-	{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
-	{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
-	{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+func init() {
+	petCache = cache.NewPetCache(1000, 5*time.Minute)
+	csrfProt = middleware.NewCSRFProtection()
 }
 
-// ListPets handles GET /api/pets and returns all pets, optionally filtered by type.
-// It acquires a read lock for thread-safe access to the pets slice.
+// ListPets returns paginated list of pets
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
 	typeParam := r.URL.Query().Get("type")
+	page := pagination.ParsePagination(r)
 
 	petsMu.RLock()
 	defer petsMu.RUnlock()
 
-	if typeParam == "" {
-		if err := json.NewEncoder(w).Encode(pets); err != nil {
-			http.Error(w, "encoding error", http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-	filtered := []models.Pet{}
+	// Filter pets if type specified
+	var filtered []models.Pet
 	for _, pet := range pets {
-		if strings.EqualFold(pet.Type, typeParam) {
+		if typeParam == "" || strings.EqualFold(pet.Type, typeParam) {
 			filtered = append(filtered, pet)
 		}
 	}
-	if err := json.NewEncoder(w).Encode(filtered); err != nil {
-		http.Error(w, "encoding error", http.StatusInternalServerError)
+
+	// Convert to interface slice for pagination
+	items := make([]interface{}, len(filtered))
+	for i, pet := range filtered {
+		items[i] = pet
 	}
+
+	pagedPage, pagedItems := pagination.Paginate(items, page.Page, page.PageSize)
+
+	// Convert back to Pet slice
+	result := make([]models.Pet, len(pagedItems))
+	for i, item := range pagedItems {
+		result[i] = item.(models.Pet)
+	}
+
+	petLogger.Info("list pets", map[string]interface{}{
+		"page":      page.Page,
+		"page_size": page.PageSize,
+		"total":     pagedPage.Total,
+	})
+
+	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
 
-// GetPet handles GET /api/pet?id=<id> and returns the pet with the specified ID.
-// Returns 400 if id is missing, and 404 if the pet is not found.
+// GetPet returns a single pet by ID
 func GetPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -56,10 +84,19 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
 		return
 	}
+
 	var targetID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+
+	// Try cache first
+	cacheKey := cache.GetPetKey(targetID)
+	if cached, found := petCache.Get(cacheKey); found {
+		petLogger.Debug("cache hit", map[string]interface{}{"id": targetID})
+		json.NewEncoder(w).Encode(cached)
 		return
 	}
 
@@ -68,6 +105,8 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 
 	for _, pet := range pets {
 		if pet.ID == targetID {
+			// Store in cache
+			petCache.Set(cacheKey, pet)
 			json.NewEncoder(w).Encode(pet)
 			return
 		}
@@ -76,8 +115,7 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// DeletePet handles DELETE /api/pet?id=<id> and removes the pet with the specified ID.
-// Returns 400 if id is missing or invalid, and 404 if the pet is not found.
+// DeletePet deletes a pet by ID
 func DeletePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -86,6 +124,7 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
 		return
 	}
+
 	var targetID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -100,6 +139,10 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 		if pet.ID == targetID {
 			deletedPet := pets[i]
 			pets = append(pets[:i], pets[i+1:]...)
+			// Invalidate cache
+			petCache.Delete(cache.GetPetKey(targetID))
+			petLogger.Info("pet deleted", map[string]interface{}{"id": targetID})
+			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(deletedPet)
 			return
 		}
@@ -108,27 +151,37 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// SearchPets handles GET /api/pet/search?name=<name> and returns pets matching the name.
-// If name is empty, returns all pets. Search is case-insensitive.
+// SearchPets searches pets by name with pagination
 func SearchPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
+	page := pagination.ParsePagination(r)
 
 	petsMu.RLock()
 	defer petsMu.RUnlock()
 
-	if nameParam == "" {
-		json.NewEncoder(w).Encode(pets)
-		return
-	}
-
-	filtered := []models.Pet{}
+	var filtered []models.Pet
 	for _, pet := range pets {
-		if containsIgnoreCase(pet.Name, nameParam) {
+		if nameParam == "" || containsIgnoreCase(pet.Name, nameParam) {
 			filtered = append(filtered, pet)
 		}
 	}
-	json.NewEncoder(w).Encode(filtered)
+
+	// Convert to interface slice for pagination
+	items := make([]interface{}, len(filtered))
+	for i, pet := range filtered {
+		items[i] = pet
+	}
+
+	pagedPage, pagedItems := pagination.Paginate(items, page.Page, page.PageSize)
+
+	// Convert back to Pet slice
+	result := make([]models.Pet, len(pagedItems))
+	for i, item := range pagedItems {
+		result[i] = item.(models.Pet)
+	}
+
+	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
 
 // containsIgnoreCase checks if s contains substr, case-insensitively.
@@ -138,8 +191,7 @@ func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-// UpdatePet handles PUT /api/pet and updates an existing pet's information.
-// It validates required fields (id, name) and updates only non-empty fields.
+// UpdatePet updates a pet with validation
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -169,11 +221,29 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for SQL injection in input
+	if validator.ContainsSQLKeywords(pet.Name) || validator.ContainsSQLKeywords(pet.Type) {
+		petLogger.Warn("potential injection attempt", map[string]interface{}{
+			"name": pet.Name,
+			"type": pet.Type,
+		})
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid characters in input"})
+		return
+	}
+
 	petsMu.Lock()
 	defer petsMu.Unlock()
 
 	for i, p := range pets {
 		if p.ID == pet.ID {
+			// Validate input only if the pet exists
+			if errs := validator.ValidatePet(pet.Name, pet.Type, pet.Status); errs.HasErrors() {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": errs.Error()})
+				return
+			}
+
 			pets[i].Name = pet.Name
 			if pet.Type != "" {
 				pets[i].Type = pet.Type
@@ -184,6 +254,9 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			if pet.Status != "" {
 				pets[i].Status = pet.Status
 			}
+			// Invalidate cache
+			petCache.Delete(cache.GetPetKey(pet.ID))
+			petLogger.Info("pet updated", map[string]interface{}{"id": pet.ID})
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(pets[i])
 			return
@@ -194,8 +267,7 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// AddPetPhoto handles POST /api/pet/<id>/photos and adds a photo URL to the pet.
-// If the URL already exists, it removes the existing one (toggle behavior).
+// AddPetPhoto adds a photo to a pet
 func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -221,9 +293,26 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate URL
 	if req.URL == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "url is required"})
+		return
+	}
+
+	if !validator.ValidateURL(req.URL) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid url format"})
+		return
+	}
+
+	// Check for XSS
+	if validator.ContainsSQLKeywords(req.URL) {
+		petLogger.Warn("potential XSS in photo URL", map[string]interface{}{
+			"url": req.URL,
+		})
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid url"})
 		return
 	}
 
@@ -250,7 +339,7 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// DeletePetPhoto handles DELETE /api/pet/<id>/photos?url=<url> and removes a photo URL from the pet.
+// DeletePetPhoto deletes a photo from a pet
 func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -296,7 +385,7 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// GetPetPhotos handles GET /api/pet/<id>/photos and returns the photo URLs of the pet.
+// GetPetPhotos returns photos for a pet
 func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -316,9 +405,6 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	petsMu.RLock()
-	defer petsMu.RUnlock()
-
 	for _, pet := range pets {
 		if pet.ID == targetID {
 			json.NewEncoder(w).Encode(pet.PhotoUrls)
@@ -329,8 +415,7 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// PetPhotoHandler handles GET, POST, DELETE for /api/pet/<id>/photos endpoints.
-// It delegates to GetPetPhotos, AddPetPhoto, and DeletePetPhoto respectively.
+// PetPhotoHandler routes photo-related requests
 func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -343,4 +428,18 @@ func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", "GET, POST, DELETE")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+// GetCacheStats returns cache statistics
+func GetCacheStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(petCache.Stats())
+}
+
+// GetCacheHitRate returns the cache hit rate
+func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"hit_rate": petCache.HitRate(),
+	})
 }
