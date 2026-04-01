@@ -13,6 +13,8 @@ import (
 )
 
 func resetPets() {
+	petsMu.Lock()
+	defer petsMu.Unlock()
 	pets = []models.Pet{
 		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
 		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
@@ -78,6 +80,7 @@ func TestListPets(t *testing.T) {
 }
 
 func TestGetPet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -193,6 +196,7 @@ func TestDeletePet(t *testing.T) {
 }
 
 func TestSearchPets(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -249,6 +253,7 @@ func TestSearchPets(t *testing.T) {
 }
 
 func TestUpdatePet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -322,6 +327,7 @@ func TestUpdatePet(t *testing.T) {
 }
 
 func TestPetHandler(t *testing.T) {
+	defer resetPets()
 	t.Run("GET method should call GetPet", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/pet/1/photos", nil)
 		w := httptest.NewRecorder()
