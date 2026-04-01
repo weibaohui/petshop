@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"petshop/internal/models"
+	"petshop/internal/pagination"
 )
 
 func resetPets() {
@@ -69,19 +70,26 @@ func TestListPets(t *testing.T) {
 				t.Errorf("ListPets() status = %d, want %d", w.Code, tt.wantStatusCode)
 			}
 
-			var pets []models.Pet
-			if err := json.NewDecoder(w.Body).Decode(&pets); err != nil {
+			var response pagination.PagedResponse
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 				t.Errorf("ListPets() failed to decode response: %v", err)
 			}
 
-			if len(pets) != tt.wantLen {
-				t.Errorf("ListPets() got %d pets, want %d", len(pets), tt.wantLen)
+			data, ok := response.Data.([]interface{})
+			if !ok {
+				t.Errorf("ListPets() response data is not an array")
+				return
+			}
+
+			if len(data) != tt.wantLen {
+				t.Errorf("ListPets() got %d pets, want %d", len(data), tt.wantLen)
 			}
 		})
 	}
 }
 
 func TestGetPet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -208,6 +216,7 @@ func TestDeletePet(t *testing.T) {
 }
 
 func TestSearchPets(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		queryString    string
@@ -257,19 +266,26 @@ func TestSearchPets(t *testing.T) {
 				t.Errorf("SearchPets() status = %d, want %d", w.Code, tt.wantStatusCode)
 			}
 
-			var pets []models.Pet
-			if err := json.NewDecoder(w.Body).Decode(&pets); err != nil {
+			var response pagination.PagedResponse
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 				t.Errorf("SearchPets() failed to decode response: %v", err)
 			}
 
-			if len(pets) != tt.wantLen {
-				t.Errorf("SearchPets() got %d pets, want %d", len(pets), tt.wantLen)
+			data, ok := response.Data.([]interface{})
+			if !ok {
+				t.Errorf("SearchPets() response data is not an array")
+				return
+			}
+
+			if len(data) != tt.wantLen {
+				t.Errorf("SearchPets() got %d pets, want %d", len(data), tt.wantLen)
 			}
 		})
 	}
 }
 
 func TestUpdatePet(t *testing.T) {
+	defer resetPets()
 	tests := []struct {
 		name           string
 		requestBody    string
