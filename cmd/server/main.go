@@ -29,8 +29,14 @@ func main() {
 	http.HandleFunc("/api/pet/search", handlers.SearchPets)
 	http.HandleFunc("/api/pet/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		if strings.HasSuffix(path, "/photos") {
+		parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+		// parts should be like ["", "api", "pet", "1"] or ["", "api", "pet", "1", "photos"]
+		if len(parts) >= 5 && parts[4] == "photos" {
 			handlers.PetPhotoHandler(w, r)
+			return
+		}
+		if len(parts) != 4 {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		switch r.Method {
