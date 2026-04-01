@@ -20,16 +20,22 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	typeParam := r.URL.Query().Get("type")
 	if typeParam == "" {
-		json.NewEncoder(w).Encode(pets)
+		if err := json.NewEncoder(w).Encode(pets); err != nil {
+			http.Error(w, "encoding error", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 	filtered := []models.Pet{}
 	for _, pet := range pets {
-		if pet.Type == typeParam {
+		if strings.EqualFold(pet.Type, typeParam) {
 			filtered = append(filtered, pet)
 		}
 	}
-	json.NewEncoder(w).Encode(filtered)
+	if err := json.NewEncoder(w).Encode(filtered); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func GetPet(w http.ResponseWriter, r *http.Request) {
