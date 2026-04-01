@@ -14,9 +14,9 @@ import (
 var petsMu sync.RWMutex
 
 var pets = []models.Pet{
-	{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
-	{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
-	{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+	{ID: 1, Name: "Buddy", Type: "Dog", Photos: []string{"url1"}, Status: "available"},
+	{ID: 2, Name: "Whiskers", Type: "Cat", Photos: []string{"url2"}, Status: "available"},
+	{ID: 3, Name: "Goldie", Type: "Fish", Photos: []string{"url3"}, Status: "available"},
 }
 
 func ListPets(w http.ResponseWriter, r *http.Request) {
@@ -164,8 +164,8 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			if pet.Type != "" {
 				pets[i].Type = pet.Type
 			}
-			if pet.PhotoUrls != nil {
-				pets[i].PhotoUrls = pet.PhotoUrls
+			if pet.Photos != nil {
+				pets[i].Photos = pet.Photos
 			}
 			if pet.Status != "" {
 				pets[i].Status = pet.Status
