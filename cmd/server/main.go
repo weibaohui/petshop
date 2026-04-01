@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"petshop/internal/db"
 	"petshop/internal/handlers"
 	"petshop/internal/logger"
 	"petshop/internal/middleware"
@@ -17,6 +18,12 @@ func main() {
 
 	// Initialize logger
 	logger.Init("logs")
+
+	// Initialize database for cart persistence
+	if err := db.InitDB("./cart.db"); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer db.Close()
 
 	// Create rate limiter (100 requests per minute)
 	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
@@ -189,6 +196,38 @@ func main() {
 	// ==================== 销售统计 ====================
 	mux.HandleFunc("/api/admin/stats/sales", handlers.GetSalesStats)
 	mux.HandleFunc("/api/admin/stats/hot-products", handlers.GetHotProducts)
+
+	// ==================== 购物车管理 ====================
+	// Apply auth middleware to protect cart endpoints (issue #1)
+	cartHandler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetCart(w, r)
+		case http.MethodPost:
+			handlers.AddToCart(w, r)
+		case http.MethodPut:
+			handlers.UpdateCartItem(w, r)
+		case http.MethodDelete:
+			handlers.DeleteCartItem(w, r)
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Allow", "GET, POST, PUT, DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+	http.Handle("/api/cart", cartHandler)
+	http.Handle("/api/cart/", cartHandler)
+
+	// Clear cart endpoint
+	http.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			cartHandler.ServeHTTP(w, r)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Allow", "DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
 
 	// ==================== 系统配置 ====================
 	// 轮播图管理
