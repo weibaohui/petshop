@@ -216,16 +216,16 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 
 	for i, pet := range pets {
 		if pet.ID == targetID {
-			for _, existingUrl := range pets[i].Photos {
+			for _, existingUrl := range pets[i].PhotoUrls {
 				if existingUrl == req.URL {
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(pets[i].Photos)
+					json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 					return
 				}
 			}
-			pets[i].Photos = append(pets[i].Photos, req.URL)
+			pets[i].PhotoUrls = append(pets[i].PhotoUrls, req.URL)
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pets[i].Photos)
+			json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 			return
 		}
 	}
@@ -261,16 +261,16 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 
 	for i, pet := range pets {
 		if pet.ID == targetID {
-			for j, p := range pets[i].Photos {
+			for j, p := range pets[i].PhotoUrls {
 				if p == urlStr {
-					pets[i].Photos = append(pets[i].Photos[:j], pets[i].Photos[j+1:]...)
+					pets[i].PhotoUrls = append(pets[i].PhotoUrls[:j], pets[i].PhotoUrls[j+1:]...)
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(pets[i].Photos)
+					json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 					return
 				}
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pets[i].Photos)
+			json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 			return
 		}
 	}
@@ -294,12 +294,15 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	petsMu.RLock()
 	for _, pet := range pets {
 		if pet.ID == targetID {
-			json.NewEncoder(w).Encode(pet.Photos)
+			petsMu.RUnlock()
+			json.NewEncoder(w).Encode(pet.PhotoUrls)
 			return
 		}
 	}
+	petsMu.RUnlock()
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }

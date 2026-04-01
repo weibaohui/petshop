@@ -29,10 +29,32 @@ func main() {
 	http.HandleFunc("/api/pet/search", handlers.SearchPets)
 	http.HandleFunc("/api/pet/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
-		if strings.HasSuffix(path, "/photos") {
+		pathParts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+		// Expected format: ["", "api", "pet", "{id}"] or ["", "api", "pet", "{id}", "photos"]
+		if len(pathParts) != 4 && len(pathParts) != 5 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if pathParts[0] != "" || pathParts[1] != "api" || pathParts[2] != "pet" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		// Validate id is numeric
+		var id int64
+		if _, err := fmt.Sscanf(pathParts[3], "%d", &id); err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		// If 5 parts, must be ".../{id}/photos"
+		if len(pathParts) == 5 {
+			if pathParts[4] != "photos" {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
 			handlers.PetPhotoHandler(w, r)
 			return
 		}
+		// len == 4, base path ".../{id}"
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetPet(w, r)

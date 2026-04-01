@@ -14,7 +14,6 @@ func TestPetStruct(t *testing.T) {
 			Name:      "Buddy",
 			Type:      "Dog",
 			PhotoUrls: []string{"url1", "url2"},
-			Photos:    []string{"photo1.jpg"},
 			Status:    "available",
 		}
 
@@ -29,12 +28,11 @@ func TestPetStruct(t *testing.T) {
 		assert.Equal(t, pet.Name, decoded.Name)
 		assert.Equal(t, pet.Type, decoded.Type)
 		assert.Equal(t, pet.PhotoUrls, decoded.PhotoUrls)
-		assert.Equal(t, pet.Photos, decoded.Photos)
 		assert.Equal(t, pet.Status, decoded.Status)
 	})
 
 	t.Run("Pet JSON deserialization from JSON string", func(t *testing.T) {
-		jsonStr := `{"id":2,"name":"Whiskers","type":"Cat","photoUrls":["url3"],"photos":["photo2.jpg"],"status":"available"}`
+		jsonStr := `{"id":2,"name":"Whiskers","type":"Cat","photoUrls":["url3"],"status":"available"}`
 
 		var pet Pet
 		err := json.Unmarshal([]byte(jsonStr), &pet)
@@ -44,7 +42,6 @@ func TestPetStruct(t *testing.T) {
 		assert.Equal(t, "Whiskers", pet.Name)
 		assert.Equal(t, "Cat", pet.Type)
 		assert.Equal(t, []string{"url3"}, pet.PhotoUrls)
-		assert.Equal(t, []string{"photo2.jpg"}, pet.Photos)
 		assert.Equal(t, "available", pet.Status)
 	})
 
@@ -54,7 +51,6 @@ func TestPetStruct(t *testing.T) {
 			Name:      "Goldie",
 			Type:      "Fish",
 			PhotoUrls: []string{},
-			Photos:    []string{},
 			Status:    "available",
 		}
 
@@ -67,6 +63,5 @@ func TestPetStruct(t *testing.T) {
 
 		assert.Equal(t, pet.ID, decoded.ID)
 		assert.Empty(t, decoded.PhotoUrls)
-		assert.Empty(t, decoded.Photos)
 	})
 }
