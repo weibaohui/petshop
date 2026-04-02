@@ -68,24 +68,24 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 		req.Quantity = 1
 	}
 
-	// Get product from server data to verify price (issue #2: price verification)
+	// Get product from server data to verify price and stock
+	// Use a single lock to prevent TOCTOU race condition (issue #6)
 	dataMu.RLock()
 	product, exists := products[req.ProductID]
-	dataMu.RUnlock()
-
 	if !exists || product.Status != "on_sale" {
+		dataMu.RUnlock()
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
-	// Verify stock - consider existing cart quantity
-	dataMu.RLock()
+	// Verify stock - consider existing cart quantity (still under lock)
 	existingQty := getExistingCartQuantity(userID, req.ProductID)
-	dataMu.RUnlock()
 	if product.Stock < req.Quantity+existingQty {
+		dataMu.RUnlock()
 		http.Error(w, "insufficient stock", http.StatusBadRequest)
 		return
 	}
+	dataMu.RUnlock()
 
 	// Use authoritative product name and price from server (issue #2)
 	repo := db.NewCartRepository()
@@ -153,21 +153,22 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify stock for the product
+	// Verify stock for the product (issue #6: prevent TOCTOU by keeping lock during validation)
 	dataMu.RLock()
 	product, exists := products[itemToUpdate.ProductID]
-	dataMu.RUnlock()
-
 	if !exists || product.Status != "on_sale" {
+		dataMu.RUnlock()
 		http.Error(w, "product no longer available", http.StatusBadRequest)
 		return
 	}
 
 	// Stock check: the new quantity should be available (not added to existing since we're replacing)
 	if product.Stock < req.Quantity {
+		dataMu.RUnlock()
 		http.Error(w, "insufficient stock", http.StatusBadRequest)
 		return
 	}
+	dataMu.RUnlock()
 
 	// Update quantity
 	if err := repo.UpdateCartItemQuantity(userID, req.ItemID, req.Quantity); err != nil {
