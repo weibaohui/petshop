@@ -115,15 +115,15 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	// 记录库存入库
 	inventoryLogs = append(inventoryLogs, models.Inventory{
-		ID:         nextInventoryID,
-		ProductID:  p.ID,
-		ChangeType: "in",
-		Quantity:   req.Stock,
+		ID:          nextInventoryID,
+		ProductID:   p.ID,
+		ChangeType:  "in",
+		Quantity:    req.Stock,
 		BeforeStock: 0,
 		AfterStock:  req.Stock,
-		Reason:     "新增商品",
-		Operator:   "system",
-		CreatedAt:  now,
+		Reason:      "新增商品",
+		Operator:    "system",
+		CreatedAt:   now,
 	})
 	nextInventoryID++
 
