@@ -222,6 +222,17 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate path ID matches body ID
+	pathIDStr := r.URL.Query().Get("id")
+	if pathIDStr != "" {
+		var pathID int64
+		if _, err := fmt.Sscanf(pathIDStr, "%d", &pathID); err == nil && pathID != pet.ID {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "path id does not match body id"})
+			return
+		}
+	}
+
 	if pet.Name == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "name is required"})
@@ -328,9 +339,9 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 
 	for i, pet := range pets {
 		if pet.ID == targetID {
-			for idx, existingUrl := range pets[i].PhotoUrls {
+			for _, existingUrl := range pets[i].PhotoUrls {
 				if existingUrl == req.URL {
-					pets[i].PhotoUrls = append(pets[i].PhotoUrls[:idx], pets[i].PhotoUrls[idx+1:]...)
+					// URL already exists, return current list without modification
 					w.WriteHeader(http.StatusOK)
 					json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 					return
