@@ -23,15 +23,39 @@ var ErrMissingJWTSecret = errors.New("JWT_SECRET_KEY environment variable is not
 // defaultJWTSecretKey is used only in development when JWT_SECRET_KEY is not set
 const defaultJWTSecretKey = "dev-only-256-bit-secret-key-do-not-use-in-prod"
 
+// jwtSecret holds the injected JWT secret key for testing or custom configuration
+var jwtSecret []byte
+
+// SetJWTSecret allows injecting a JWT secret key programmatically.
+// This is primarily used for testing to ensure tests use an isolated test key.
+// When set, this takes precedence over environment variables.
+func SetJWTSecret(secret string) {
+	jwtSecret = []byte(secret)
+}
+
+// ClearJWTSecret clears the injected JWT secret key.
+// After calling this, GetJWTSecretKey will fall back to environment variables.
+func ClearJWTSecret() {
+	jwtSecret = nil
+}
+
 // isDevelopment returns true if APP_ENV is set to "development"
 func isDevelopment() bool {
 	return os.Getenv("APP_ENV") == "development"
 }
 
-// GetJWTSecretKey returns the JWT secret key from environment variable
-// Falls back to development default only if APP_ENV is "development"
+// GetJWTSecretKey returns the JWT secret key.
+// Priority:
+// 1. Injected secret via SetJWTSecret (for testing)
+// 2. JWT_SECRET_KEY environment variable
+// 3. Development default only if APP_ENV is "development"
 // In production, returns error if JWT_SECRET_KEY is not set or is too short
 func GetJWTSecretKey() ([]byte, error) {
+	// Return injected secret if available (allows test isolation)
+	if jwtSecret != nil {
+		return jwtSecret, nil
+	}
+
 	secret := os.Getenv("JWT_SECRET_KEY")
 	if secret == "" {
 		if isDevelopment() {
@@ -125,11 +149,15 @@ func GetUserID(ctx context.Context) (int64, bool) {
 	return userID, ok
 }
 
-// GenerateToken generates a JWT token for a user (utility for testing)
-func GenerateToken(userID int64) (string, error) {
-	secretKey, err := GetJWTSecretKey()
-	if err != nil {
-		return "", err
+// GenerateTokenWithSecret generates a JWT token with the provided secret key.
+// If secretKey is nil or empty, it falls back to GetJWTSecretKey().
+func GenerateTokenWithSecret(userID int64, secretKey []byte) (string, error) {
+	if len(secretKey) == 0 {
+		var err error
+		secretKey, err = GetJWTSecretKey()
+		if err != nil {
+			return "", err
+		}
 	}
 	claims := &JWTClaims{
 		UserID: userID,
@@ -139,4 +167,10 @@ func GenerateToken(userID int64) (string, error) {
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secretKey)
+}
+
+// GenerateToken generates a JWT token for a user (utility for testing).
+// Uses the injected secret (SetJWTSecret) if available, otherwise uses GetJWTSecretKey().
+func GenerateToken(userID int64) (string, error) {
+	return GenerateTokenWithSecret(userID, nil)
 }

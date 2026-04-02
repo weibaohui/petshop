@@ -9,9 +9,17 @@ import (
 	"testing"
 )
 
+// testJWTSecret is a dedicated test key used to isolate tests from production keys.
+// This ensures tests do not depend on or expose the production JWT secret.
+const testJWTSecret = "test-only-256-bit-secret-key-isolated"
+
 func TestMain(m *testing.M) {
-	os.Setenv("APP_ENV", "development")
-	m.Run()
+	// Set test environment and inject an isolated test JWT secret
+	os.Setenv("APP_ENV", "test")
+	SetJWTSecret(testJWTSecret)
+	code := m.Run()
+	ClearJWTSecret()
+	os.Exit(code)
 }
 
 func TestAuthMiddleware_NoAuthHeader(t *testing.T) {
