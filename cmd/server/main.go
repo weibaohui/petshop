@@ -223,11 +223,11 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}))
-	http.Handle("/api/cart", cartHandler)
-	http.Handle("/api/cart/", cartHandler)
+	mux.Handle("/api/cart", cartHandler)
+	mux.Handle("/api/cart/", cartHandler)
 
 	// Clear cart endpoint
-	http.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
 			cartHandler.ServeHTTP(w, r)
 		} else {
