@@ -9,9 +9,17 @@ import (
 	"testing"
 )
 
+// testJWTSecret is a dedicated secret key for test isolation
+const testJWTSecret = "test-only-secret-key-do-not-use-in-production-32bytes"
+
 func TestMain(m *testing.M) {
 	os.Setenv("APP_ENV", "development")
-	m.Run()
+	// Set isolated test JWT secret
+	SetJWTSecret(testJWTSecret)
+	code := m.Run()
+	// Clean up after tests
+	ResetJWTSecret()
+	os.Exit(code)
 }
 
 func TestAuthMiddleware_NoAuthHeader(t *testing.T) {
