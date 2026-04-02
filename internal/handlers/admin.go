@@ -113,11 +113,3 @@ func init() {
 	systemConfigs["site_name"] = "宠物商店"
 	systemConfigs["inventory_threshold"] = "10"
 }
-
-// abs returns the absolute value of x.
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
