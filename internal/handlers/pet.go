@@ -46,6 +46,27 @@ func GetPetCache() *cache.PetCache {
 	return petCache
 }
 
+// ResetPetsForTesting resets the pets state for testing
+// This should only be used in tests
+func ResetPetsForTesting() {
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
+	// Reset pets to initial state
+	pets = []models.Pet{
+		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
+		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
+		{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+	}
+
+	// Reset cache if it exists
+	if petCache != nil {
+		petCache.ResetForTesting()
+	} else {
+		petCache = cache.NewPetCache(1000, 5*time.Minute)
+	}
+}
+
 // ListPets returns paginated list of pets
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")

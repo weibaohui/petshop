@@ -197,6 +197,21 @@ func NewPetCache(maxSize int, expiration time.Duration) *PetCache {
 	}
 }
 
+// ResetForTesting resets the cache state for testing
+// This should only be used in tests
+func (c *PetCache) ResetForTesting() {
+	if c == nil || c.Cache == nil {
+		return
+	}
+	// Reset stopOnce so Stop() can be called again
+	c.Cache.stopOnce = sync.Once{}
+	// Clear all items
+	c.Cache.Clear()
+	// Reset hit/miss counts
+	c.Cache.hitCount = 0
+	c.Cache.missCount = 0
+}
+
 // GetPetKey generates a cache key for pet operations
 func GetPetKey(id int64) string {
 	return generateKey("pet", id)

@@ -87,6 +87,17 @@ func Close() {
 	}
 }
 
+// ResetForTesting resets the logger state for testing
+// This should only be used in tests
+func ResetForTesting() {
+	once = sync.Once{}
+	if logFile != nil {
+		logFile.Close()
+		logFile = nil
+	}
+	globalLogger = nil
+}
+
 func (l *Logger) log(level LogLevel, msg string, fields map[string]interface{}) {
 	entry := LogEntry{
 		Timestamp: time.Now().Format("2006-01-02 15:04:05.000"),

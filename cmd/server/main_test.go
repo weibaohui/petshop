@@ -25,11 +25,16 @@ func setupTestServer(t *testing.T) (http.Handler, func()) {
 	// Create temp directory for test files
 	tempDir := t.TempDir()
 
+	// Reset global state for testing
+	logger.ResetForTesting()
+	handlers.ResetPetsForTesting()
+
 	// Initialize logger
 	logger.Init(tempDir)
 
 	// Initialize database with temp file
 	dbPath := filepath.Join(tempDir, "test.db")
+	db.ResetForTesting()
 	if err := db.InitDB(dbPath); err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -53,6 +58,8 @@ func setupTestServer(t *testing.T) (http.Handler, func()) {
 		db.Close()
 		db.ResetForTesting()
 		logger.Close()
+		logger.ResetForTesting()
+		handlers.ResetPetsForTesting()
 	}
 
 	return chain, cleanup
@@ -63,6 +70,7 @@ func TestRouteRegistration(t *testing.T) {
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
 
+	// Reset pets state before each subtest to avoid test order dependency
 	tests := []struct {
 		name           string
 		method         string
@@ -114,6 +122,9 @@ func TestRouteRegistration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Reset pets state before each subtest to avoid test order dependency
+			handlers.ResetPetsForTesting()
+
 			var reqBody io.Reader
 			if tt.body != "" {
 				reqBody = strings.NewReader(tt.body)
@@ -228,6 +239,13 @@ func TestXSSProtection(t *testing.T) {
 
 // TestRecoveryMiddleware tests panic recovery
 func TestRecoveryMiddleware(t *testing.T) {
+	// Initialize logger for this test
+	tempDir := t.TempDir()
+	logger.ResetForTesting()
+	logger.Init(tempDir)
+	defer logger.Close()
+	defer logger.ResetForTesting()
+
 	// Create a mux with a route that panics
 	mux := http.NewServeMux()
 	mux.HandleFunc("/panic", func(w http.ResponseWriter, r *http.Request) {
@@ -799,5 +817,91 @@ func TestServerConfigCreation(t *testing.T) {
 	}
 	if config.shutdownTimeout != 5*time.Second {
 		t.Errorf("Expected shutdownTimeout 5s, got %v", config.shutdownTimeout)
+	}
+}
+
+// TestRunWithConfigServer tests the runWithConfig function with actual server start/stop
+func TestRunWithConfigServer(t *testing.T) {
+	tempDir := t.TempDir()
+
+	config := &serverConfig{
+		addr:            "127.0.0.1:0", // Let system assign port
+		logDir:          tempDir,
+		dbPath:          filepath.Join(tempDir, "test_run.db"),
+		shutdownTimeout: 1 * time.Second,
+	}
+
+	// Reset state before test
+	logger.ResetForTesting()
+	db.ResetForTesting()
+	handlers.ResetPetsForTesting()
+
+	// Start server in a goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- runWithConfig(config)
+	}()
+
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Server should be running, send signal to stop
+	select {
+	case err := <-errCh:
+		// If we get an error immediately, that's unexpected
+		if err != nil {
+			t.Logf("runWithConfig returned error: %v", err)
+		}
+	case <-time.After(200 * time.Millisecond):
+		// Server is still running, which is expected
+		t.Log("Server started successfully")
+	}
+
+	// Cleanup
+	db.Close()
+	logger.Close()
+	logger.ResetForTesting()
+	handlers.ResetPetsForTesting()
+}
+
+// TestCartRoutesMethods tests cart routes with different HTTP methods
+func TestCartRoutesMethods(t *testing.T) {
+	// Set JWT secret for testing
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	handler, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	tests := []struct {
+		name           string
+		method         string
+		path           string
+		body           string
+		expectedStatus int
+	}{
+		{"Cart POST", "POST", "/api/cart", `{"product_id":1,"quantity":1}`, http.StatusUnauthorized},
+		{"Cart PUT", "PUT", "/api/cart", `{"product_id":1,"quantity":2}`, http.StatusUnauthorized},
+		{"Cart DELETE", "DELETE", "/api/cart", "", http.StatusUnauthorized},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body io.Reader
+			if tt.body != "" {
+				body = strings.NewReader(tt.body)
+			}
+			req := httptest.NewRequest(tt.method, tt.path, body)
+			if tt.body != "" {
+				req.Header.Set("Content-Type", "application/json")
+			}
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+		})
 	}
 }

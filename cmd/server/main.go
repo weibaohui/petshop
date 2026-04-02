@@ -86,19 +86,24 @@ func runWithConfig(config *serverConfig) error {
 		Handler: chain,
 	}
 
-	// Start server in goroutine
+	// Start server in goroutine with error channel
+	errCh := make(chan error, 1)
 	go func() {
 		log.Printf("Server starting on %s", config.addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Server error: %v", err)
+			errCh <- err
 		}
 	}()
 
-	// Wait for interrupt signal
+	// Wait for interrupt signal or server error
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("Shutting down server...")
+	select {
+	case <-quit:
+		log.Println("Shutting down server...")
+	case err := <-errCh:
+		return fmt.Errorf("server failed to start: %w", err)
+	}
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), config.shutdownTimeout)
