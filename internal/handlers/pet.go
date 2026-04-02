@@ -1,3 +1,4 @@
+// Package handlers provides HTTP handlers for the petshop API.
 package handlers
 
 import (
@@ -18,17 +19,23 @@ import (
 )
 
 var (
-	petsMu    sync.RWMutex
-	pets      = []models.Pet{
+	// petsMu protects concurrent access to the pets slice
+	petsMu sync.RWMutex
+	// pets is the in-memory store of pets
+	pets = []models.Pet{
 		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
 		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
 		{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
 	}
-	petCache  *cache.PetCache
-	csrfProt  *middleware.CSRFProtection
+	// petCache provides caching for pet data
+	petCache *cache.PetCache
+	// csrfProt provides CSRF protection for state-changing operations
+	csrfProt *middleware.CSRFProtection
+	// petLogger is the logger for pet-related operations
 	petLogger = logger.New("handlers")
 )
 
+// init initializes the pet cache and CSRF protection.
 func init() {
 	petCache = cache.NewPetCache(1000, 5*time.Minute)
 	csrfProt = middleware.NewCSRFProtection()
