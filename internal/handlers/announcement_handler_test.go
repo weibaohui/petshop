@@ -126,6 +126,16 @@ func TestUpdateAnnouncement(t *testing.T) {
 			UpdateAnnouncement(w, req)
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
+
+			// 验证公告确实被更新
+			if tt.wantStatusCode == http.StatusOK {
+				dataMu.RLock()
+				updatedAnnouncement, exists := announcements[1]
+				dataMu.RUnlock()
+				assert.True(t, exists, "公告应该存在")
+				assert.Equal(t, "更新后的公告", updatedAnnouncement.Title, "标题应该被更新")
+				assert.Equal(t, "更新后的内容", updatedAnnouncement.Content, "内容应该被更新")
+			}
 		})
 	}
 }
@@ -175,6 +185,14 @@ func TestDeleteAnnouncement(t *testing.T) {
 			DeleteAnnouncement(w, req)
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
+
+			// 验证公告确实被删除
+			if tt.wantStatusCode == http.StatusOK {
+				dataMu.RLock()
+				_, exists := announcements[1]
+				dataMu.RUnlock()
+				assert.False(t, exists, "公告ID=1应该被从存储中删除")
+			}
 		})
 	}
 }
