@@ -110,7 +110,8 @@ func resetAdminData() {
 // ==================== Product Handler Tests ====================
 
 func TestListProducts(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/products", nil)
 	w := httptest.NewRecorder()
@@ -126,7 +127,8 @@ func TestListProducts(t *testing.T) {
 }
 
 func TestGetProduct(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -181,7 +183,8 @@ func TestGetProduct(t *testing.T) {
 }
 
 func TestCreateProduct(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -244,7 +247,8 @@ func TestCreateProduct(t *testing.T) {
 }
 
 func TestUpdateProduct(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -294,13 +298,24 @@ func TestUpdateProduct(t *testing.T) {
 				err := json.NewDecoder(w.Body).Decode(&product)
 				assert.NoError(t, err)
 				assert.Equal(t, "狗粮 20kg", product.Name)
+
+				// 验证库存变更记录
+				assert.Len(t, inventoryLogs, 1)
+				if len(inventoryLogs) > 0 {
+					assert.Equal(t, int64(1), inventoryLogs[0].ProductID)
+					assert.Equal(t, 10, inventoryLogs[0].Quantity) // 库存从50增加到60
+					assert.Equal(t, "in", inventoryLogs[0].ChangeType)
+					assert.Equal(t, 50, inventoryLogs[0].BeforeStock)
+					assert.Equal(t, 60, inventoryLogs[0].AfterStock)
+				}
 			}
 		})
 	}
 }
 
 func TestDeleteProduct(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -348,7 +363,8 @@ func TestDeleteProduct(t *testing.T) {
 }
 
 func TestDeleteProductWithPendingOrder(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	// 尝试删除有关联未完成订单的商品 (product ID 1 在订单 1 中)
 	req := httptest.NewRequest(http.MethodDelete, "/api/admin/product?id=1", nil)
@@ -363,7 +379,8 @@ func TestDeleteProductWithPendingOrder(t *testing.T) {
 // ==================== User Handler Tests ====================
 
 func TestListUsers(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/users", nil)
 	w := httptest.NewRecorder()
@@ -379,7 +396,8 @@ func TestListUsers(t *testing.T) {
 }
 
 func TestGetUser(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -434,7 +452,8 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestUpdateUserStatus(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -489,7 +508,8 @@ func TestUpdateUserStatus(t *testing.T) {
 }
 
 func TestResetUserPassword(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -541,7 +561,8 @@ func TestResetUserPassword(t *testing.T) {
 // ==================== Order Handler Tests ====================
 
 func TestListOrders(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -588,7 +609,8 @@ func TestListOrders(t *testing.T) {
 }
 
 func TestGetOrder(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -643,7 +665,8 @@ func TestGetOrder(t *testing.T) {
 }
 
 func TestUpdateOrderStatus(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -698,7 +721,8 @@ func TestUpdateOrderStatus(t *testing.T) {
 }
 
 func TestProcessRefund(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -729,6 +753,13 @@ func TestProcessRefund(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resetAdminData()
+
+			// 对于退款测试，记录退款前的库存
+			var stockBefore int
+			if tt.name == "process refund for existing order" {
+				stockBefore = products[1].Stock // 订单1包含product 1
+			}
+
 			req := httptest.NewRequest(http.MethodPost, "/api/admin/order/refund", strings.NewReader(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -742,6 +773,11 @@ func TestProcessRefund(t *testing.T) {
 				err := json.NewDecoder(w.Body).Decode(&response)
 				assert.NoError(t, err)
 				assert.Equal(t, "refund processed", response["message"])
+
+				// 验证库存增加（订单1包含1个product 1）
+				if tt.name == "process refund for existing order" {
+					assert.Equal(t, stockBefore+1, products[1].Stock)
+				}
 			}
 		})
 	}
@@ -750,15 +786,24 @@ func TestProcessRefund(t *testing.T) {
 // ==================== Inventory Handler Tests ====================
 
 func TestListInventoryLogs(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
-	// 先创建一个产品来生成库存记录
-	req := httptest.NewRequest(http.MethodPost, "/api/admin/products", strings.NewReader(`{"name":"测试商品","price":100,"stock":50}`))
+	// 使用 AdjustInventory 创建稳定的库存日志记录
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/inventory/adjust", strings.NewReader(`{"productId":1,"quantity":10,"reason":"测试库存调整"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	CreateProduct(w, req)
+	AdjustInventory(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
 
-	resetAdminData()
+	// 创建第二条库存日志记录
+	req = httptest.NewRequest(http.MethodPost, "/api/admin/inventory/adjust", strings.NewReader(`{"productId":2,"quantity":-2,"reason":"测试库存损耗"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	AdjustInventory(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 查询库存日志
 	req = httptest.NewRequest(http.MethodGet, "/api/admin/inventory/logs", nil)
 	w = httptest.NewRecorder()
 
@@ -769,12 +814,25 @@ func TestListInventoryLogs(t *testing.T) {
 	var response []models.Inventory
 	err := json.NewDecoder(w.Body).Decode(&response)
 	assert.NoError(t, err)
-	// 初始状态下库存记录为空
-	assert.NotNil(t, response)
+	// 验证返回的库存日志数据
+	assert.Len(t, response, 2)
+	if len(response) >= 2 {
+		// 验证第一条日志（product 1，增加10）
+		assert.Equal(t, int64(1), response[0].ProductID)
+		assert.Equal(t, 10, response[0].Quantity)
+		assert.Equal(t, "测试库存调整", response[0].Reason)
+		assert.Equal(t, "in", response[0].ChangeType)
+		// 验证第二条日志（product 2，减少2，Quantity存储的是绝对值）
+		assert.Equal(t, int64(2), response[1].ProductID)
+		assert.Equal(t, 2, response[1].Quantity)
+		assert.Equal(t, "测试库存损耗", response[1].Reason)
+		assert.Equal(t, "out", response[1].ChangeType)
+	}
 }
 
 func TestGetInventoryAlerts(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/inventory/alerts", nil)
 	w := httptest.NewRecorder()
@@ -795,7 +853,8 @@ func TestGetInventoryAlerts(t *testing.T) {
 }
 
 func TestAdjustInventory(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -844,7 +903,8 @@ func TestAdjustInventory(t *testing.T) {
 }
 
 func TestAdjustInventoryNegativeStock(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	// 测试库存不能变为负数
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/inventory/adjust",
@@ -866,7 +926,8 @@ func TestAdjustInventoryNegativeStock(t *testing.T) {
 // ==================== Stats Handler Tests ====================
 
 func TestGetSalesStats(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -914,7 +975,8 @@ func TestGetSalesStats(t *testing.T) {
 }
 
 func TestGetHotProducts(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -959,7 +1021,8 @@ func TestGetHotProducts(t *testing.T) {
 // ==================== System Handler Tests ====================
 
 func TestListCarousels(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/carousels", nil)
 	w := httptest.NewRecorder()
@@ -975,7 +1038,8 @@ func TestListCarousels(t *testing.T) {
 }
 
 func TestCreateCarousel(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1019,7 +1083,8 @@ func TestCreateCarousel(t *testing.T) {
 }
 
 func TestUpdateCarousel(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1062,7 +1127,8 @@ func TestUpdateCarousel(t *testing.T) {
 }
 
 func TestDeleteCarousel(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1110,7 +1176,8 @@ func TestDeleteCarousel(t *testing.T) {
 }
 
 func TestListAnnouncements(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/announcements", nil)
 	w := httptest.NewRecorder()
@@ -1126,7 +1193,8 @@ func TestListAnnouncements(t *testing.T) {
 }
 
 func TestCreateAnnouncement(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1170,7 +1238,8 @@ func TestCreateAnnouncement(t *testing.T) {
 }
 
 func TestUpdateAnnouncement(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1213,7 +1282,8 @@ func TestUpdateAnnouncement(t *testing.T) {
 }
 
 func TestDeleteAnnouncement(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1261,7 +1331,8 @@ func TestDeleteAnnouncement(t *testing.T) {
 }
 
 func TestGetSystemConfigs(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/configs", nil)
 	w := httptest.NewRecorder()
@@ -1277,7 +1348,8 @@ func TestGetSystemConfigs(t *testing.T) {
 }
 
 func TestSetSystemConfig(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	tests := []struct {
 		name           string
@@ -1326,7 +1398,8 @@ func TestSetSystemConfig(t *testing.T) {
 }
 
 func TestSetSystemConfigUpdatesThreshold(t *testing.T) {
-	defer resetAdminData()
+	resetAdminData()
+	t.Cleanup(resetAdminData)
 
 	// 更新库存阈值
 	req := httptest.NewRequest(http.MethodPost, "/api/admin/config",
