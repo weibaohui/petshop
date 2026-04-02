@@ -18,6 +18,14 @@ type CreateAnnouncementRequest struct {
 	Content string `json:"content"`
 }
 
+// UpdateAnnouncementRequest represents the request body for updating an announcement.
+type UpdateAnnouncementRequest struct {
+	ID      int64   `json:"id"`
+	Title   *string `json:"title"`
+	Content *string `json:"content"`
+	Status  *string `json:"status"`
+}
+
 // ListAnnouncements handles GET /api/admin/announcements and returns all announcements.
 func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
@@ -41,6 +49,11 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req CreateAnnouncementRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.Title == "" || req.Content == "" {
+		http.Error(w, "title and content are required", http.StatusBadRequest)
 		return
 	}
 
@@ -71,8 +84,8 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var a models.Announcement
-	if err := json.Unmarshal(body, &a); err != nil {
+	var req UpdateAnnouncementRequest
+	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -80,15 +93,15 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	dataMu.Lock()
 	defer dataMu.Unlock()
 
-	if existing, ok := announcements[a.ID]; ok {
-		if a.Title != "" {
-			existing.Title = a.Title
+	if existing, ok := announcements[req.ID]; ok {
+		if req.Title != nil {
+			existing.Title = *req.Title
 		}
-		if a.Content != "" {
-			existing.Content = a.Content
+		if req.Content != nil {
+			existing.Content = *req.Content
 		}
-		if a.Status != "" {
-			existing.Status = a.Status
+		if req.Status != nil {
+			existing.Status = *req.Status
 		}
 		existing.UpdatedAt = time.Now()
 		json.NewEncoder(w).Encode(existing)

@@ -49,6 +49,18 @@ func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Key == "inventory_threshold" {
+		v, err := strconv.Atoi(req.Value)
+		if err != nil {
+			http.Error(w, "inventory_threshold must be a valid integer", http.StatusBadRequest)
+			return
+		}
+		if v < 0 {
+			http.Error(w, "inventory_threshold must be non-negative", http.StatusBadRequest)
+			return
+		}
+	}
+
 	dataMu.Lock()
 	defer dataMu.Unlock()
 
@@ -56,9 +68,8 @@ func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 
 	// 更新库存预警阈值
 	if req.Key == "inventory_threshold" {
-		if v, err := strconv.Atoi(req.Value); err == nil {
-			inventoryThreshold = v
-		}
+		v, _ := strconv.Atoi(req.Value)
+		inventoryThreshold = v
 	}
 
 	w.WriteHeader(http.StatusOK)
