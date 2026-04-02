@@ -150,8 +150,8 @@ func TestRateLimitMiddleware_WithXForwardedFor(t *testing.T) {
 }
 
 func TestGetClientIP_UntrustedProxy(t *testing.T) {
-	// Without trusted proxies set, X-Forwarded-For should be ignored
-	// as no proxies are configured (backward compatible - permissive mode)
+	// When no trusted proxies are set (nil), X-Forwarded-For and X-Real-IP should be ignored
+	// because the proxy is not trusted. Only RemoteAddr should be used.
 	SetTrustedProxies(nil)
 
 	tests := []struct {
@@ -161,8 +161,8 @@ func TestGetClientIP_UntrustedProxy(t *testing.T) {
 		remoteAddr string
 		expected  string
 	}{
-		{"X-Forwarded-For from untrusted", "10.0.0.1", "", "192.168.1.1:1234", "10.0.0.1"},
-		{"X-Real-IP from untrusted", "", "10.0.0.2", "192.168.1.1:1234", "10.0.0.2"},
+		{"X-Forwarded-For from untrusted", "10.0.0.1", "", "192.168.1.1:1234", "192.168.1.1"},
+		{"X-Real-IP from untrusted", "", "10.0.0.2", "192.168.1.1:1234", "192.168.1.1"},
 		{"RemoteAddr only", "", "", "192.168.1.1:1234", "192.168.1.1"},
 	}
 
@@ -188,6 +188,7 @@ func TestGetClientIP_UntrustedProxy(t *testing.T) {
 func TestGetClientIP_TrustedProxy(t *testing.T) {
 	// Set trusted proxy to 192.168.1.0/24
 	SetTrustedProxies([]string{"192.168.1.0/24"})
+	t.Cleanup(func() { SetTrustedProxies(nil) })
 
 	tests := []struct {
 		name       string
@@ -219,14 +220,12 @@ func TestGetClientIP_TrustedProxy(t *testing.T) {
 			}
 		})
 	}
-
-	// Reset to no trusted proxies
-	SetTrustedProxies(nil)
 }
 
 func TestGetClientIP_UntrustedProxyRejectsXFF(t *testing.T) {
 	// Set trusted proxy to 10.0.0.0/8, so 192.168.1.x is NOT trusted
 	SetTrustedProxies([]string{"10.0.0.0/8"})
+	t.Cleanup(func() { SetTrustedProxies(nil) })
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	req.Header.Set("X-Forwarded-For", "10.0.0.1")
@@ -237,9 +236,6 @@ func TestGetClientIP_UntrustedProxyRejectsXFF(t *testing.T) {
 	if ip != "192.168.1.1" {
 		t.Errorf("expected untrusted proxy to return RemoteAddr IP '192.168.1.1', got '%s'", ip)
 	}
-
-	// Reset to no trusted proxies
-	SetTrustedProxies(nil)
 }
 
 func TestNewCSRFProtection(t *testing.T) {

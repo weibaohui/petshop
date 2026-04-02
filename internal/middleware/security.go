@@ -15,11 +15,16 @@ import (
 
 // trustedProxies contains the list of trusted proxy IPs/CIDRs.
 // Only requests from these proxies will have X-Forwarded-For and X-Real-IP headers trusted.
-var trustedProxies []net.IPNet
+var (
+	trustedProxies   []net.IPNet
+	trustedProxiesMu sync.RWMutex
+)
 
 // SetTrustedProxies configures the list of trusted proxy CIDR ranges.
 // This should be called during server initialization with the proxy network ranges.
 func SetTrustedProxies(cidrs []string) {
+	trustedProxiesMu.Lock()
+	defer trustedProxiesMu.Unlock()
 	trustedProxies = nil
 	for _, cidr := range cidrs {
 		if _, ipNet, err := net.ParseCIDR(cidr); err == nil {
@@ -37,12 +42,14 @@ func isTrustedProxy(ip string) bool {
 	if parsedIP == nil {
 		return false
 	}
+	trustedProxiesMu.RLock()
+	defer trustedProxiesMu.RUnlock()
 	for _, ipNet := range trustedProxies {
 		if ipNet.Contains(parsedIP) {
 			return true
 		}
 	}
-	return len(trustedProxies) == 0 // If no proxies configured, be permissive (backward compatible)
+	return false // Default reject: only trust headers from explicitly configured proxies
 }
 
 // SecurityHeaders adds security headers to responses
@@ -170,14 +177,24 @@ func getClientIP(r *http.Request) string {
 		// We only take the first IP (original client)
 		ips := strings.Split(xff, ",")
 		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
+			firstIP := strings.TrimSpace(ips[0])
+			if net.ParseIP(firstIP) != nil {
+				return firstIP
+			}
+			// Invalid IP in X-Forwarded-For, fall back to proxyIP
+			return proxyIP
 		}
 		return xff
 	}
 
 	// Check X-Real-IP header (trusted proxy)
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
+		trimmed := strings.TrimSpace(xri)
+		if net.ParseIP(trimmed) != nil {
+			return trimmed
+		}
+		// Invalid IP in X-Real-IP, fall back to proxyIP
+		return proxyIP
 	}
 
 	return proxyIP
