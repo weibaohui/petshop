@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"strings"
+	"math"
 	"testing"
 	"time"
 )
@@ -67,32 +67,24 @@ func TestCache_Get(t *testing.T) {
 		key       string
 		wantVal   interface{}
 		wantFound bool
-		hits      int64
-		misses    int64
 	}{
 		{
 			name:      "存在的key正常返回",
 			key:       "key1",
 			wantVal:   "value1",
 			wantFound: true,
-			hits:      1,
-			misses:    0,
 		},
 		{
 			name:      "不存在的key返回not found",
 			key:       "not_exist",
 			wantVal:   nil,
 			wantFound: false,
-			hits:      1,
-			misses:    1,
 		},
 		{
 			name:      "已过期的key返回not found",
 			key:       "expired",
 			wantVal:   nil,
 			wantFound: false,
-			hits:      1,
-			misses:    2,
 		},
 	}
 
@@ -258,35 +250,41 @@ func TestCache_Eviction(t *testing.T) {
 	// 每次 Set 触发 evictOldest，依次淘汰最老的过期项
 	c.Set("new1", "value1")
 
-	// 验证 old1 已被移除（最早过期）
+	// 验证 old1 已被移除（最早过期），new1 仍在
 	if _, found := c.Get("old1"); found {
 		t.Error("expected old1 to be evicted after first Set")
+	}
+	if _, found := c.Get("new1"); !found {
+		t.Error("expected new1 to still exist after first Set")
 	}
 
 	c.Set("new2", "value2")
 
-	// 验证 old2 已被移除（第二早过期）
+	// 验证 old2 已被移除（第二早过期），new1、new2 仍在
 	if _, found := c.Get("old2"); found {
 		t.Error("expected old2 to be evicted after second Set")
+	}
+	for _, key := range []string{"new1", "new2"} {
+		if _, found := c.Get(key); !found {
+			t.Errorf("expected key %q to still exist after second Set", key)
+		}
 	}
 
 	c.Set("new3", "value3")
 
-	// 验证 old3 已被移除（第三早过期）
+	// 验证 old3 已被移除（第三早过期），new1、new2、new3 仍在
 	if _, found := c.Get("old3"); found {
 		t.Error("expected old3 to be evicted after third Set")
+	}
+	for _, key := range []string{"new1", "new2", "new3"} {
+		if _, found := c.Get(key); !found {
+			t.Errorf("expected key %q to still exist after third Set", key)
+		}
 	}
 
 	// 淘汰后 size 不超过 maxSize
 	if len(c.items) > c.maxSize {
 		t.Errorf("cache size = %d, want <= %d", len(c.items), c.maxSize)
-	}
-
-	// 确认新的 key 都存在
-	for _, key := range []string{"new1", "new2", "new3"} {
-		if _, found := c.Get(key); !found {
-			t.Errorf("expected key %q to exist after eviction", key)
-		}
 	}
 }
 
@@ -306,7 +304,7 @@ func TestCache_HitRate(t *testing.T) {
 
 	// 命中和未命中后计算正确: 2 hits / 3 total = 0.666...
 	want := 2.0 / 3.0
-	if got := c.HitRate(); got != want {
+	if got := c.HitRate(); math.Abs(got-want) > 1e-9 {
 		t.Errorf("hit rate = %v, want %v", got, want)
 	}
 }
@@ -360,41 +358,27 @@ func TestGenerateKey(t *testing.T) {
 			name:   "相同输入生成相同key",
 			prefix: "test",
 			args:   []interface{}{1, "a"},
-			want:   generateKey("test", 1, "a"),
+			want:   "test:a73fcf3396409292",
 		},
 		{
 			name:   "prefix正确附加",
 			prefix: "prefix",
 			args:   []interface{}{"arg"},
+			want:   "prefix:b25f03dedd69be07",
 		},
 		{
 			name:   "不同输入生成不同key",
 			prefix: "test",
 			args:   []interface{}{1, "b"},
+			want:   "test:2caf767aa0a1dc42",
 		},
-	}
-
-	key1 := generateKey("test", 1, "a")
-	key2 := generateKey("test", 1, "a")
-	if key1 != key2 {
-		t.Errorf("相同输入生成不同key: %q vs %q", key1, key2)
-	}
-
-	key3 := generateKey("test", 1, "b")
-	if key1 == key3 {
-		t.Errorf("不同输入生成相同key: %q vs %q", key1, key3)
-	}
-
-	key4 := generateKey("prefix", "arg")
-	if !strings.HasPrefix(key4, "prefix:") {
-		t.Errorf("expected key to have prefix 'prefix:', got %q", key4)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := generateKey(tt.prefix, tt.args...)
-			if got == "" {
-				t.Error("generateKey returned empty string")
+			if got != tt.want {
+				t.Errorf("generateKey(%q, %v) = %q, want %q", tt.prefix, tt.args, got, tt.want)
 			}
 		})
 	}
@@ -422,42 +406,16 @@ func TestPetCache(t *testing.T) {
 
 	// GetPetKey生成正确key格式
 	petKey := GetPetKey(123)
-	if !strings.HasPrefix(petKey, "pet:") {
-		t.Errorf("GetPetKey prefix incorrect: %q", petKey)
-	}
-	// 验证 GetPetKey 生成确定性的key（相同输入产生相同输出）
-	petKey2 := GetPetKey(123)
-	if petKey != petKey2 {
-		t.Errorf("GetPetKey(123) inconsistent: %q vs %q", petKey, petKey2)
-	}
-	// 验证不同id生成不同key
-	petKeyDifferent := GetPetKey(456)
-	if petKey == petKeyDifferent {
-		t.Errorf("GetPetKey should generate different keys for different ids: both %q", petKey)
+	wantPetKey := generateKey("pet", int64(123))
+	if petKey != wantPetKey {
+		t.Errorf("GetPetKey(123) = %q, want %q", petKey, wantPetKey)
 	}
 
 	// GetPetsListKey生成正确key格式
 	listKey := GetPetsListKey(1, 10, "cat")
-	if !strings.HasPrefix(listKey, "pets_list:") {
-		t.Errorf("GetPetsListKey prefix incorrect: %q", listKey)
-	}
-	// 验证 GetPetsListKey 生成确定性的key（相同参数产生相同输出）
-	listKey2 := GetPetsListKey(1, 10, "cat")
-	if listKey != listKey2 {
-		t.Errorf("GetPetsListKey(1, 10, \"cat\") inconsistent: %q vs %q", listKey, listKey2)
-	}
-	// 验证不同参数生成不同key
-	listKeyDifferent := GetPetsListKey(2, 10, "cat")
-	if listKey == listKeyDifferent {
-		t.Errorf("GetPetsListKey should generate different keys for different page: both %q", listKey)
-	}
-
-	// 相同参数生成相同key
-	if GetPetKey(123) != GetPetKey(123) {
-		t.Error("GetPetKey相同输入生成不同key")
-	}
-	if GetPetsListKey(1, 10, "cat") != GetPetsListKey(1, 10, "cat") {
-		t.Error("GetPetsListKey相同输入生成不同key")
+	wantListKey := generateKey("pets_list", 1, 10, "cat")
+	if listKey != wantListKey {
+		t.Errorf("GetPetsListKey(1, 10, \"cat\") = %q, want %q", listKey, wantListKey)
 	}
 }
 
