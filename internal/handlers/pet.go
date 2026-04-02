@@ -41,6 +41,11 @@ func init() {
 	csrfProt = middleware.NewCSRFProtection()
 }
 
+// GetPetCache returns the global pet cache instance
+func GetPetCache() *cache.PetCache {
+	return petCache
+}
+
 // ListPets returns paginated list of pets
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
