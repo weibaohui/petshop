@@ -24,6 +24,8 @@ type Cache struct {
 	hitCount   int64
 	missCount  int64
 	expiration time.Duration
+	stopChan   chan struct{}
+	stopOnce   sync.Once
 }
 
 // New creates a new Cache instance
@@ -32,6 +34,7 @@ func New(maxSize int, expiration time.Duration) *Cache {
 		items:      make(map[string]*CacheItem),
 		maxSize:    maxSize,
 		expiration: expiration,
+		stopChan:   make(chan struct{}),
 	}
 	// Start cleanup goroutine
 	go c.cleanup()
@@ -41,16 +44,29 @@ func New(maxSize int, expiration time.Duration) *Cache {
 // cleanup periodically removes expired items
 func (c *Cache) cleanup() {
 	ticker := time.NewTicker(time.Minute)
-	for range ticker.C {
-		c.mu.Lock()
-		now := time.Now()
-		for key, item := range c.items {
-			if now.After(item.Expiration) {
-				delete(c.items, key)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			c.mu.Lock()
+			now := time.Now()
+			for key, item := range c.items {
+				if now.After(item.Expiration) {
+					delete(c.items, key)
+				}
 			}
+			c.mu.Unlock()
+		case <-c.stopChan:
+			return
 		}
-		c.mu.Unlock()
 	}
+}
+
+// Stop stops the cleanup goroutine
+func (c *Cache) Stop() {
+	c.stopOnce.Do(func() {
+		close(c.stopChan)
+	})
 }
 
 // generateKey creates a cache key from input
