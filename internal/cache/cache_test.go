@@ -25,7 +25,7 @@ func TestCacheStop(t *testing.T) {
 
 	// Cache should still be accessible
 	val, found = c.Get("key1")
-	if found && val != "value1" {
+	if !found || val != "value1" {
 		t.Errorf("expected to still find key1")
 	}
 }
