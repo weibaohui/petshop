@@ -149,7 +149,11 @@ func TestRateLimitMiddleware_WithXForwardedFor(t *testing.T) {
 	}
 }
 
-func TestGetClientIP(t *testing.T) {
+func TestGetClientIP_UntrustedProxy(t *testing.T) {
+	// Without trusted proxies set, X-Forwarded-For should be ignored
+	// as no proxies are configured (backward compatible - permissive mode)
+	SetTrustedProxies(nil)
+
 	tests := []struct {
 		name      string
 		xff       string
@@ -157,9 +161,9 @@ func TestGetClientIP(t *testing.T) {
 		remoteAddr string
 		expected  string
 	}{
-		{"X-Forwarded-For", "10.0.0.1", "", "192.168.1.1:1234", "10.0.0.1"},
-		{"X-Real-IP", "", "10.0.0.2", "192.168.1.1:1234", "10.0.0.2"},
-		{"RemoteAddr", "", "", "192.168.1.1:1234", "192.168.1.1:1234"},
+		{"X-Forwarded-For from untrusted", "10.0.0.1", "", "192.168.1.1:1234", "10.0.0.1"},
+		{"X-Real-IP from untrusted", "", "10.0.0.2", "192.168.1.1:1234", "10.0.0.2"},
+		{"RemoteAddr only", "", "", "192.168.1.1:1234", "192.168.1.1"},
 	}
 
 	for _, tt := range tests {
@@ -179,6 +183,63 @@ func TestGetClientIP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetClientIP_TrustedProxy(t *testing.T) {
+	// Set trusted proxy to 192.168.1.0/24
+	SetTrustedProxies([]string{"192.168.1.0/24"})
+
+	tests := []struct {
+		name       string
+		xff        string
+		xri        string
+		remoteAddr string
+		expected   string
+	}{
+		{"X-Forwarded-For from trusted proxy", "10.0.0.1", "", "192.168.1.100:1234", "10.0.0.1"},
+		{"X-Forwarded-For with multiple IPs", "10.0.0.1, 10.0.0.2, 10.0.0.3", "", "192.168.1.100:1234", "10.0.0.1"},
+		{"X-Real-IP from trusted proxy", "", "10.0.0.2", "192.168.1.100:1234", "10.0.0.2"},
+		{"No headers, trusted proxy", "", "", "192.168.1.100:1234", "192.168.1.100"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			if tt.xff != "" {
+				req.Header.Set("X-Forwarded-For", tt.xff)
+			}
+			if tt.xri != "" {
+				req.Header.Set("X-Real-IP", tt.xri)
+			}
+			req.RemoteAddr = tt.remoteAddr
+
+			ip := getClientIP(req)
+			if ip != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, ip)
+			}
+		})
+	}
+
+	// Reset to no trusted proxies
+	SetTrustedProxies(nil)
+}
+
+func TestGetClientIP_UntrustedProxyRejectsXFF(t *testing.T) {
+	// Set trusted proxy to 10.0.0.0/8, so 192.168.1.x is NOT trusted
+	SetTrustedProxies([]string{"10.0.0.0/8"})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("X-Forwarded-For", "10.0.0.1")
+	req.RemoteAddr = "192.168.1.1:1234" // Not in 10.0.0.0/8
+
+	ip := getClientIP(req)
+	// Should return proxy IP (from RemoteAddr) not the spoofed XFF
+	if ip != "192.168.1.1" {
+		t.Errorf("expected untrusted proxy to return RemoteAddr IP '192.168.1.1', got '%s'", ip)
+	}
+
+	// Reset to no trusted proxies
+	SetTrustedProxies(nil)
 }
 
 func TestNewCSRFProtection(t *testing.T) {
