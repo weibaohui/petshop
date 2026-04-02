@@ -13,6 +13,8 @@ import (
 	"petshop/internal/middleware"
 )
 
+// main is the entry point for the petshop server application.
+// It initializes logging, database, middleware, and all API routes.
 func main() {
 	fmt.Println("Project: petshop")
 
@@ -300,6 +302,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", chain))
 }
 
+// run initializes and executes the application.
+// It sets up required resources and runs the main event loop.
 func run() error {
 	// Application initialization
 	return nil

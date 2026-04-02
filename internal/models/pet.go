@@ -1,5 +1,6 @@
 package models
 
+// Pet represents a pet in the petshop system.
 type Pet struct {
 	ID        int64    `json:"id"`
 	Name      string   `json:"name"`
