@@ -55,12 +55,13 @@ var (
 	globalLogger *Logger
 	once         sync.Once
 	logFile      *os.File
+	testingMode  bool // When true, allows re-initialization for testing
 )
 
 // Init initializes the global logger
 func Init(logDir string) error {
 	var err error
-	once.Do(func() {
+	initFunc := func() {
 		if logDir != "" {
 			os.MkdirAll(logDir, 0755)
 			logFile, err = os.OpenFile(
@@ -71,7 +72,14 @@ func Init(logDir string) error {
 			}
 		}
 		globalLogger = &Logger{module: "app"}
-	})
+	}
+
+	if testingMode {
+		// In testing mode, always reinitialize
+		initFunc()
+	} else {
+		once.Do(initFunc)
+	}
 	return err
 }
 
@@ -85,6 +93,25 @@ func Close() {
 	if logFile != nil {
 		logFile.Close()
 	}
+}
+
+// ResetTestingMode resets the testing mode flag
+// This should be called after tests complete
+func ResetTestingMode() {
+	testingMode = false
+	once = sync.Once{}
+}
+
+// ResetForTesting resets the logger state for testing
+// This should only be used in tests
+func ResetForTesting() {
+	testingMode = true
+	if logFile != nil {
+		logFile.Close()
+		logFile = nil
+	}
+	// Create a no-op logger to prevent nil pointer panics
+	globalLogger = &Logger{module: "test"}
 }
 
 func (l *Logger) log(level LogLevel, msg string, fields map[string]interface{}) {
@@ -134,23 +161,33 @@ func (l *Logger) Fatal(msg string, fields map[string]interface{}) {
 	os.Exit(1)
 }
 
-// Package-level convenience functions
+// Package-level convenience functions with nil check
 func Debug(msg string, fields map[string]interface{}) {
-	globalLogger.Debug(msg, fields)
+	if globalLogger != nil {
+		globalLogger.Debug(msg, fields)
+	}
 }
 
 func Info(msg string, fields map[string]interface{}) {
-	globalLogger.Info(msg, fields)
+	if globalLogger != nil {
+		globalLogger.Info(msg, fields)
+	}
 }
 
 func Warn(msg string, fields map[string]interface{}) {
-	globalLogger.Warn(msg, fields)
+	if globalLogger != nil {
+		globalLogger.Warn(msg, fields)
+	}
 }
 
 func Error(msg string, fields map[string]interface{}) {
-	globalLogger.Error(msg, fields)
+	if globalLogger != nil {
+		globalLogger.Error(msg, fields)
+	}
 }
 
 func Access(msg string, fields map[string]interface{}) {
-	globalLogger.Info(msg, fields)
+	if globalLogger != nil {
+		globalLogger.Info(msg, fields)
+	}
 }

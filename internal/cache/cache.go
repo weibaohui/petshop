@@ -41,6 +41,19 @@ func New(maxSize int, expiration time.Duration) *Cache {
 	return c
 }
 
+// NewWithStopChan creates a new Cache instance with a pre-existing stop channel (for testing)
+func NewWithStopChan(maxSize int, expiration time.Duration, stopChan chan struct{}) *Cache {
+	c := &Cache{
+		items:      make(map[string]*CacheItem),
+		maxSize:    maxSize,
+		expiration: expiration,
+		stopChan:   stopChan,
+	}
+	// Start cleanup goroutine
+	go c.cleanup()
+	return c
+}
+
 // cleanup periodically removes expired items
 func (c *Cache) cleanup() {
 	ticker := time.NewTicker(time.Minute)
@@ -195,6 +208,20 @@ func NewPetCache(maxSize int, expiration time.Duration) *PetCache {
 	return &PetCache{
 		Cache: New(maxSize, expiration),
 	}
+}
+
+// ResetForTesting resets the cache state for testing by replacing the underlying cache
+// This should only be used in tests
+func (c *PetCache) ResetForTesting() {
+	if c == nil {
+		return
+	}
+	// Stop the old cache's cleanup goroutine if it hasn't been stopped
+	if c.Cache != nil {
+		c.Cache.Stop()
+	}
+	// Replace with a new cache instance
+	c.Cache = New(1000, 5*time.Minute)
 }
 
 // GetPetKey generates a cache key for pet operations
