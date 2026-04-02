@@ -17,6 +17,12 @@ func NewCartRepository() *CartRepository {
 	return &CartRepository{db: GetDB()}
 }
 
+// NewCartRepositoryWithDB creates a new CartRepository with a specific database instance
+// This is useful for testing with isolated database instances
+func NewCartRepositoryWithDB(db *sql.DB) *CartRepository {
+	return &CartRepository{db: db}
+}
+
 // GetCartItems returns all cart items for a user with full data copy (concurrency safe)
 func (r *CartRepository) GetCartItems(userID int64) ([]*models.CartItem, error) {
 	rows, err := r.db.Query(`

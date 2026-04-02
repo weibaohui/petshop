@@ -68,7 +68,25 @@ func createTables() error {
 // Close closes the database connection
 func Close() error {
 	if db != nil {
-		return db.Close()
+		err := db.Close()
+		if err == nil {
+			db = nil
+			dbInited = false
+		}
+		return err
 	}
 	return nil
+}
+
+// ResetForTesting resets the database state for testing
+// This should only be used in tests
+func ResetForTesting() {
+	dbMu.Lock()
+	defer dbMu.Unlock()
+	if db != nil {
+		db.Close()
+	}
+	db = nil
+	dbInited = false
+	dbErr = nil
 }
