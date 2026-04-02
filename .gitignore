@@ -1,0 +1,52 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.bin
+bin/
+server
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+cart.db
+tasks.db
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+go.sum
+
+# Build artifacts
+*.o
+*.a
+*.so
+
+# Local config
+.env
+.env.local
+*.local
+
+# Test coverage
+coverage.out
+*.cover
+
+# Misc
+*.tmp
+*.temp
