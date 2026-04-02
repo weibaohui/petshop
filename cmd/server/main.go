@@ -54,6 +54,18 @@ func run() error {
 
 // runWithConfig runs the server with the given configuration
 func runWithConfig(config *serverConfig) error {
+	return runWithDependencies(config, nil)
+}
+
+// runWithDependencies runs the server with injectable dependencies for testing
+// signalChan: optional channel to receive shutdown signals (for testing)
+// serverErrorHandler: optional function to handle server errors (for testing)
+type serverDependencies struct {
+	signalChan     <-chan os.Signal
+	serverErrorHandler func(error)
+}
+
+func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	// Initialize logger
 	logger.Init(config.logDir)
 
@@ -92,12 +104,22 @@ func runWithConfig(config *serverConfig) error {
 		log.Printf("Server starting on %s", config.addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- err
+			if deps != nil && deps.serverErrorHandler != nil {
+				deps.serverErrorHandler(err)
+			}
 		}
 	}()
 
 	// Wait for interrupt signal or server error
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	var quit <-chan os.Signal
+	if deps != nil && deps.signalChan != nil {
+		quit = deps.signalChan
+	} else {
+		quitCh := make(chan os.Signal, 1)
+		signal.Notify(quitCh, syscall.SIGINT, syscall.SIGTERM)
+		quit = quitCh
+	}
+
 	select {
 	case <-quit:
 		log.Println("Shutting down server...")

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -398,7 +399,7 @@ func TestPetPathVariations(t *testing.T) {
 	}
 }
 
-// TestRunWithConfig tests the runWithConfig function
+// TestRunWithConfig tests the runWithConfig function with injected dependencies
 func TestRunWithConfig(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -409,27 +410,43 @@ func TestRunWithConfig(t *testing.T) {
 		shutdownTimeout: 1 * time.Second,
 	}
 
-	// Reset database state before test
+	// Reset state before test
+	logger.ResetForTesting()
 	db.ResetForTesting()
-	defer db.ResetForTesting()
+	handlers.ResetPetsForTesting()
+	defer func() {
+		db.ResetForTesting()
+		logger.ResetTestingMode()
+		handlers.ResetPetsForTesting()
+	}()
 
-	// Test that runWithConfig can be called and returns without panic
-	// Note: In a real scenario, this would start a server and wait for signals
-	// For unit testing, we just verify the configuration is valid
+	// Create a signal channel for testing
+	sigCh := make(chan os.Signal, 1)
 
-	// Verify config values
-	if config.addr != "127.0.0.1:0" {
-		t.Errorf("Expected addr 127.0.0.1:0, got %s", config.addr)
-	}
-	if config.logDir != tempDir {
-		t.Errorf("Expected logDir %s, got %s", tempDir, config.logDir)
-	}
+	// Start server in background
+	errCh := make(chan error, 1)
+	go func() {
+		deps := &serverDependencies{
+			signalChan: sigCh,
+		}
+		errCh <- runWithDependencies(config, deps)
+	}()
 
-	// Test database initialization with config
-	if err := db.InitDB(config.dbPath); err != nil {
-		t.Errorf("Failed to initialize database: %v", err)
+	// Wait for server to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Send signal to shutdown
+	sigCh <- syscall.SIGTERM
+
+	// Wait for graceful shutdown
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Errorf("runWithConfig returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("Timeout waiting for server to shutdown")
 	}
-	db.Close()
 }
 
 // TestSetupRoutes tests route setup function
@@ -835,33 +852,39 @@ func TestRunWithConfigServer(t *testing.T) {
 	logger.ResetForTesting()
 	db.ResetForTesting()
 	handlers.ResetPetsForTesting()
+	defer func() {
+		db.ResetForTesting()
+		logger.ResetTestingMode()
+		handlers.ResetPetsForTesting()
+	}()
+
+	// Create a signal channel for testing
+	sigCh := make(chan os.Signal, 1)
 
 	// Start server in a goroutine
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- runWithConfig(config)
+		deps := &serverDependencies{
+			signalChan: sigCh,
+		}
+		errCh <- runWithDependencies(config, deps)
 	}()
 
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
 	// Server should be running, send signal to stop
+	sigCh <- syscall.SIGTERM
+
+	// Wait for graceful shutdown
 	select {
 	case err := <-errCh:
-		// If we get an error immediately, that's unexpected
 		if err != nil {
 			t.Logf("runWithConfig returned error: %v", err)
 		}
-	case <-time.After(200 * time.Millisecond):
-		// Server is still running, which is expected
-		t.Log("Server started successfully")
+	case <-time.After(2 * time.Second):
+		t.Error("Timeout waiting for server to shutdown")
 	}
-
-	// Cleanup
-	db.Close()
-	logger.Close()
-	logger.ResetForTesting()
-	handlers.ResetPetsForTesting()
 }
 
 // TestCartRoutesMethods tests cart routes with different HTTP methods
