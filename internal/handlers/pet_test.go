@@ -14,6 +14,8 @@ import (
 )
 
 func resetPets() {
+	ResetPetsForTesting()
+	// Override with test data
 	pets = []models.Pet{
 		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
 		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
