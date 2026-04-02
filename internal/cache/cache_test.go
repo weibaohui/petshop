@@ -88,6 +88,10 @@ func TestCache_Get(t *testing.T) {
 		},
 	}
 
+	// 记录测试前的命中/未命中次数
+	hitsBefore := c.hitCount
+	missesBefore := c.missCount
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotVal, gotFound := c.Get(tt.key)
@@ -97,12 +101,12 @@ func TestCache_Get(t *testing.T) {
 		})
 	}
 
-	// 验证命中次数统计
-	if c.hitCount != 1 {
-		t.Errorf("hitCount = %d, want 1", c.hitCount)
+	// 验证命中次数统计（与测试前对比）
+	if c.hitCount-hitsBefore != 1 {
+		t.Errorf("hitCount increment = %d, want 1", c.hitCount-hitsBefore)
 	}
-	if c.missCount != 2 {
-		t.Errorf("missCount = %d, want 2", c.missCount)
+	if c.missCount-missesBefore != 2 {
+		t.Errorf("missCount increment = %d, want 2", c.missCount-missesBefore)
 	}
 
 	// 确认过期key已被删除（再次Get应miss）
@@ -292,8 +296,8 @@ func TestCache_HitRate(t *testing.T) {
 	c := New(100, time.Minute)
 	defer c.Stop()
 
-	// 初始命中率为0
-	if rate := c.HitRate(); rate != 0 {
+	// 初始命中率为0（使用容差比较浮点数）
+	if rate := c.HitRate(); math.Abs(rate) > 1e-9 {
 		t.Errorf("initial hit rate = %v, want 0", rate)
 	}
 
@@ -342,7 +346,7 @@ func TestCache_Stats(t *testing.T) {
 		t.Errorf("stats[miss_count] = %v, want 1", stats["miss_count"])
 	}
 	wantRate := 1.0 / 2.0
-	if stats["hit_rate"] != wantRate {
+	if gotRate, ok := stats["hit_rate"].(float64); !ok || math.Abs(gotRate-wantRate) > 1e-9 {
 		t.Errorf("stats[hit_rate] = %v, want %v", stats["hit_rate"], wantRate)
 	}
 }
