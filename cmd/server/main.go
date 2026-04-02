@@ -64,7 +64,7 @@ func main() {
 		path := r.URL.Path
 		parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
 		// parts should be like ["", "api", "pet", "1"] or ["", "api", "pet", "1", "photos"]
-		if len(parts) >= 5 && parts[4] == "photos" {
+		if len(parts) == 5 && parts[4] == "photos" {
 			handlers.PetPhotoHandler(w, r)
 			return
 		}
@@ -72,6 +72,8 @@ func main() {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		// Extract pet ID from path and set as query param for handlers
+		r.URL.RawQuery = "id=" + parts[3]
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetPet(w, r)
