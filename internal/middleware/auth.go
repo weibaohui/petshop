@@ -23,15 +23,37 @@ var ErrMissingJWTSecret = errors.New("JWT_SECRET_KEY environment variable is not
 // defaultJWTSecretKey is used only in development when JWT_SECRET_KEY is not set
 const defaultJWTSecretKey = "dev-only-256-bit-secret-key-do-not-use-in-prod"
 
+// jwtSecretOverride allows overriding the JWT secret key programmatically
+// This is useful for testing isolation
+var jwtSecretOverride []byte
+
 // isDevelopment returns true if APP_ENV is set to "development"
 func isDevelopment() bool {
 	return os.Getenv("APP_ENV") == "development"
+}
+
+// SetJWTSecret sets the JWT secret key programmatically.
+// This overrides the environment variable and default key.
+// Use ResetJWTSecret() to restore default behavior.
+func SetJWTSecret(secret string) {
+	jwtSecretOverride = []byte(secret)
+}
+
+// ResetJWTSecret clears the programmatic JWT secret override,
+// restoring the default behavior of reading from environment variable.
+func ResetJWTSecret() {
+	jwtSecretOverride = nil
 }
 
 // GetJWTSecretKey returns the JWT secret key from environment variable
 // Falls back to development default only if APP_ENV is "development"
 // In production, returns error if JWT_SECRET_KEY is not set or is too short
 func GetJWTSecretKey() ([]byte, error) {
+	// Check if a programmatic override is set (for testing isolation)
+	if jwtSecretOverride != nil {
+		return jwtSecretOverride, nil
+	}
+
 	secret := os.Getenv("JWT_SECRET_KEY")
 	if secret == "" {
 		if isDevelopment() {
