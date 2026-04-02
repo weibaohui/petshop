@@ -17,17 +17,49 @@ import (
 	"petshop/internal/middleware"
 )
 
+// serverConfig holds server configuration for testing
+type serverConfig struct {
+	addr       string
+	logDir     string
+	dbPath     string
+	shutdownTimeout time.Duration
+}
+
+// defaultConfig returns default server configuration
+func defaultConfig() *serverConfig {
+	return &serverConfig{
+		addr:       ":8080",
+		logDir:     "logs",
+		dbPath:     "./cart.db",
+		shutdownTimeout: 10 * time.Second,
+	}
+}
+
 // main is the entry point for the petshop server application.
 // It initializes logging, database, middleware, and all API routes.
 func main() {
 	fmt.Println("Project: petshop")
 
+	if err := run(); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+}
+
+// run initializes and executes the application.
+// It sets up required resources and runs the main event loop.
+func run() error {
+	config := defaultConfig()
+	return runWithConfig(config)
+}
+
+// runWithConfig runs the server with the given configuration
+func runWithConfig(config *serverConfig) error {
 	// Initialize logger
-	logger.Init("logs")
+	logger.Init(config.logDir)
 
 	// Initialize database for cart persistence
-	if err := db.InitDB("./cart.db"); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+	if err := db.InitDB(config.dbPath); err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 	defer db.Close()
 
@@ -45,7 +77,47 @@ func main() {
 					middleware.XSSProtection(
 						middleware.InputSanitizer(mux))))))
 
-	// Register routes
+	// Setup routes
+	setupRoutes(mux)
+
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:    config.addr,
+		Handler: chain,
+	}
+
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server starting on %s", config.addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Server error: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), config.shutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	// Stop cache cleanup goroutines
+	handlers.GetPetCache().Stop()
+
+	log.Println("Server exited")
+	return nil
+}
+
+// setupRoutes registers all API routes to the given mux
+func setupRoutes(mux *http.ServeMux) {
+	// Pet routes
 	mux.HandleFunc("/api/pets", handlers.ListPets)
 	mux.HandleFunc("/api/pet", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -105,6 +177,18 @@ func main() {
 </html>`))
 	})
 
+	// Setup admin routes
+	setupAdminRoutes(mux)
+
+	// Setup cart routes
+	setupCartRoutes(mux)
+
+	// Setup system config routes
+	setupConfigRoutes(mux)
+}
+
+// setupAdminRoutes registers admin API routes
+func setupAdminRoutes(mux *http.ServeMux) {
 	// ==================== 商品管理 ====================
 	mux.HandleFunc("/api/admin/products", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -204,9 +288,11 @@ func main() {
 	// ==================== 销售统计 ====================
 	mux.HandleFunc("/api/admin/stats/sales", handlers.GetSalesStats)
 	mux.HandleFunc("/api/admin/stats/hot-products", handlers.GetHotProducts)
+}
 
-	// ==================== 购物车管理 ====================
-	// Apply auth middleware to protect cart endpoints (issue #1)
+// setupCartRoutes registers cart API routes
+func setupCartRoutes(mux *http.ServeMux) {
+	// Apply auth middleware to protect cart endpoints
 	cartHandler := middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -236,8 +322,10 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+}
 
-	// ==================== 系统配置 ====================
+// setupConfigRoutes registers system config routes
+func setupConfigRoutes(mux *http.ServeMux) {
 	// 轮播图管理
 	mux.HandleFunc("/api/admin/carousels", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -303,44 +391,4 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
-
-	// Create HTTP server
-	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: chain,
-	}
-
-	// Start server in goroutine
-	go func() {
-		log.Println("Server starting on :8080")
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %v", err)
-		}
-	}()
-
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("Shutting down server...")
-
-	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
-	}
-
-	// Stop cache cleanup goroutines
-	handlers.GetPetCache().Stop()
-
-	log.Println("Server exited")
-}
-
-// run initializes and executes the application.
-// It sets up required resources and runs the main event loop.
-func run() error {
-	// Application initialization
-	return nil
 }
