@@ -67,6 +67,9 @@ func createTables() error {
 
 // Close closes the database connection
 func Close() error {
+	dbMu.Lock()
+	defer dbMu.Unlock()
+
 	if db != nil {
 		err := db.Close()
 		if err == nil {

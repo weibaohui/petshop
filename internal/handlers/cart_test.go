@@ -164,9 +164,6 @@ func TestGetCart_Unauthorized(t *testing.T) {
 }
 
 func TestAddToCart(t *testing.T) {
-	setupCartTestDB(t)
-	resetCartData()
-
 	tests := []struct {
 		name           string
 		userID         int64
@@ -248,6 +245,10 @@ func TestAddToCart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup fresh state for each subtest to avoid shared state
+			setupCartTestDB(t)
+			resetCartData()
+
 			req := createRequestWithUser(http.MethodPost, "/api/cart", tt.requestBody, tt.userID)
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -404,7 +405,7 @@ func TestUpdateCartItem(t *testing.T) {
 				return item.ID
 			},
 			requestBody: func(itemID int64) string {
-				return `{"itemId":` + string(rune('0'+int(itemID))) + `,"quantity":100}`
+				return `{"itemId":` + formatInt64(itemID) + `,"quantity":100}`
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantSuccess:    false,
