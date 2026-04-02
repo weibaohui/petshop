@@ -3,9 +3,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"strings"
 	"time"
@@ -98,7 +98,8 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var targetID int64
-	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
+	targetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
@@ -138,7 +139,8 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var targetID int64
-	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
+	targetID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
@@ -230,8 +232,8 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	// Validate path ID matches body ID
 	pathIDStr := r.URL.Query().Get("id")
 	if pathIDStr != "" {
-		var pathID int64
-		if _, err := fmt.Sscanf(pathIDStr, "%d", &pathID); err == nil && pathID != pet.ID {
+		pathID, err := strconv.ParseInt(pathIDStr, 10, 64)
+		if err == nil && pathID != pet.ID {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"error": "path id does not match body id"})
 			return
@@ -301,7 +303,8 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var targetID int64
-	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+	targetID, err := strconv.ParseInt(pathParts[3], 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
@@ -373,7 +376,8 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var targetID int64
-	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+	targetID, err := strconv.ParseInt(pathParts[3], 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
@@ -422,7 +426,8 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var targetID int64
-	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
+	targetID, err := strconv.ParseInt(pathParts[3], 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
