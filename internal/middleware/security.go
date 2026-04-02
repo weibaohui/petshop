@@ -1,15 +1,49 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"petshop/internal/logger"
 	"petshop/internal/validator"
 )
+
+// trustedProxies contains the list of trusted proxy IPs/CIDRs.
+// Only requests from these proxies will have X-Forwarded-For and X-Real-IP headers trusted.
+var trustedProxies []net.IPNet
+
+// SetTrustedProxies configures the list of trusted proxy CIDR ranges.
+// This should be called during server initialization with the proxy network ranges.
+func SetTrustedProxies(cidrs []string) {
+	trustedProxies = nil
+	for _, cidr := range cidrs {
+		if _, ipNet, err := net.ParseCIDR(cidr); err == nil {
+			trustedProxies = append(trustedProxies, *ipNet)
+		}
+	}
+}
+
+// isTrustedProxy checks if the given IP is from a trusted proxy.
+func isTrustedProxy(ip string) bool {
+	if ip == "" {
+		return false
+	}
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+	for _, ipNet := range trustedProxies {
+		if ipNet.Contains(parsedIP) {
+			return true
+		}
+	}
+	return len(trustedProxies) == 0 // If no proxies configured, be permissive (backward compatible)
+}
 
 // SecurityHeaders adds security headers to responses
 func SecurityHeaders(next http.Handler) http.Handler {
@@ -115,17 +149,38 @@ func RateLimitMiddleware(limiter *RateLimiter) func(http.Handler) http.Handler {
 	}
 }
 
-// getClientIP extracts the client IP from request
+// getClientIP extracts the client IP from request.
+// It only trusts X-Forwarded-For and X-Real-IP headers when the request
+// comes from a trusted proxy. Otherwise, it falls back to RemoteAddr.
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
+	// Extract the proxy IP from RemoteAddr
+	proxyIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		proxyIP = r.RemoteAddr
+	}
+
+	// Only trust headers from trusted proxies
+	if !isTrustedProxy(proxyIP) {
+		return proxyIP
+	}
+
+	// Check X-Forwarded-For header (trusted proxy)
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		// X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2, ...
+		// We only take the first IP (original client)
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
 		return xff
 	}
-	// Check X-Real-IP header
+
+	// Check X-Real-IP header (trusted proxy)
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
+		return strings.TrimSpace(xri)
 	}
-	return r.RemoteAddr
+
+	return proxyIP
 }
 
 // InputSanitizer sanitizes user input to prevent injection attacks

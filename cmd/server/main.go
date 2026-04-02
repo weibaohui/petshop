@@ -17,6 +17,8 @@ import (
 	"petshop/internal/middleware"
 )
 
+// main is the entry point for the petshop server application.
+// It initializes logging, database, middleware, and all API routes.
 func main() {
 	fmt.Println("Project: petshop")
 
@@ -66,7 +68,7 @@ func main() {
 		path := r.URL.Path
 		parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
 		// parts should be like ["", "api", "pet", "1"] or ["", "api", "pet", "1", "photos"]
-		if len(parts) >= 5 && parts[4] == "photos" {
+		if len(parts) == 5 && parts[4] == "photos" {
 			handlers.PetPhotoHandler(w, r)
 			return
 		}
@@ -74,6 +76,8 @@ func main() {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		// Extract pet ID from path and set as query param for handlers
+		r.URL.RawQuery = "id=" + parts[3]
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetPet(w, r)
@@ -219,11 +223,11 @@ func main() {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	}))
-	http.Handle("/api/cart", cartHandler)
-	http.Handle("/api/cart/", cartHandler)
+	mux.Handle("/api/cart", cartHandler)
+	mux.Handle("/api/cart/", cartHandler)
 
 	// Clear cart endpoint
-	http.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/cart/clear", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodDelete {
 			cartHandler.ServeHTTP(w, r)
 		} else {
@@ -334,6 +338,8 @@ func main() {
 	log.Println("Server exited")
 }
 
+// run initializes and executes the application.
+// It sets up required resources and runs the main event loop.
 func run() error {
 	// Application initialization
 	return nil

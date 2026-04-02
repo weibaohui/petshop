@@ -170,12 +170,18 @@ func (c *Cache) Stats() map[string]interface{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	total := c.hitCount + c.missCount
+	hitRate := 0.0
+	if total > 0 {
+		hitRate = float64(c.hitCount) / float64(total)
+	}
+
 	return map[string]interface{}{
-		"size":      len(c.items),
-		"max_size":  c.maxSize,
-		"hit_count": c.hitCount,
+		"size":       len(c.items),
+		"max_size":   c.maxSize,
+		"hit_count":  c.hitCount,
 		"miss_count": c.missCount,
-		"hit_rate":  c.HitRate(),
+		"hit_rate":   hitRate,
 	}
 }
 
