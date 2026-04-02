@@ -175,13 +175,12 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedItem, err := repo.GetCartItemByID(req.ItemID)
+	// Return full cart after update
+	items, err := repo.GetCartItems(userID)
 	if err != nil {
-		http.Error(w, "failed to get updated item", http.StatusInternalServerError)
+		http.Error(w, "failed to get cart", http.StatusInternalServerError)
 		return
 	}
-
-	items := []*models.CartItem{updatedItem}
 	cart := calculateCart(userID, items)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart item updated", Cart: cart})
@@ -300,43 +299,6 @@ func calculateCart(userID int64, items []*models.CartItem) *models.Cart {
 		TotalItems: totalItems,
 		UpdatedAt:  time.Now(),
 	}
-}
-
-// parseUserID is kept for backwards compatibility but handlers should use context
-func parseUserID(r *http.Request) (int64, error) {
-	userIDStr := r.URL.Query().Get("userId")
-	if userIDStr == "" {
-		return 0, &parseError{message: "userId is required"}
-	}
-
-	var userID int64
-	_, err := parseInt(userIDStr, &userID)
-	if err != nil {
-		return 0, &parseError{message: "invalid userId format"}
-	}
-
-	return userID, nil
-}
-
-type parseError struct {
-	message string
-}
-
-func (e *parseError) Error() string {
-	return e.message
-}
-
-// parseInt helper to parse string to int64
-func parseInt(s string, target *int64) (int, error) {
-	var n int64
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, &parseError{message: "invalid number"}
-		}
-		n = n*10 + int64(c-'0')
-	}
-	*target = n
-	return len(s), nil
 }
 
 // getExistingCartQuantity gets the quantity of a product already in user's cart

@@ -8,26 +8,36 @@ import (
 )
 
 var (
-	db       *sql.DB
-	once     sync.Once
-	initErr  error
-	initDone bool
+	db      *sql.DB
+	dbMu    sync.Mutex
+	dbInited bool
+	dbErr   error
 )
 
 // InitDB initializes the database connection
 func InitDB(dbPath string) error {
-	once.Do(func() {
-		db, initErr = sql.Open("sqlite3", dbPath)
-		if initErr != nil {
-			initDone = true
-			return
-		}
-		initErr = createTables()
-		initDone = true
-	})
-	if !initDone || initErr != nil {
-		return initErr
+	dbMu.Lock()
+	defer dbMu.Unlock()
+
+	if dbInited {
+		return dbErr
 	}
+
+	db, dbErr = sql.Open("sqlite3", dbPath)
+	if dbErr != nil {
+		dbInited = true
+		return dbErr
+	}
+
+	dbErr = createTables()
+	if dbErr != nil {
+		db.Close()
+		db = nil
+		dbInited = true
+		return dbErr
+	}
+
+	dbInited = true
 	return nil
 }
 
