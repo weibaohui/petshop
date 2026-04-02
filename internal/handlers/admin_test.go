@@ -990,6 +990,12 @@ func TestCreateCarousel(t *testing.T) {
 			wantErr:        false,
 		},
 		{
+			name:           "missing imageUrl",
+			requestBody:    `{"linkUrl":"/product/2","sortOrder":2,"title":"夏季促销"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
 			name:           "invalid JSON",
 			requestBody:    `{invalid}`,
 			wantStatusCode: http.StatusBadRequest,
@@ -1139,6 +1145,18 @@ func TestCreateAnnouncement(t *testing.T) {
 			requestBody:    `{"title":"新公告","content":"公告内容"}`,
 			wantStatusCode: http.StatusCreated,
 			wantErr:        false,
+		},
+		{
+			name:           "missing title",
+			requestBody:    `{"content":"no title"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "missing content",
+			requestBody:    `{"title":"no content"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 		{
 			name:           "invalid JSON",
@@ -1296,6 +1314,18 @@ func TestSetSystemConfig(t *testing.T) {
 			requestBody:    `{"key":"inventory_threshold","value":"20"}`,
 			wantStatusCode: http.StatusOK,
 			wantErr:        false,
+		},
+		{
+			name:           "invalid inventory threshold",
+			requestBody:    `{"key":"inventory_threshold","value":"abc"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "negative inventory threshold",
+			requestBody:    `{"key":"inventory_threshold","value":"-1"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 		{
 			name:           "missing key",

@@ -45,6 +45,11 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.ImageURL == "" {
+		http.Error(w, "imageUrl is required", http.StatusBadRequest)
+		return
+	}
+
 	dataMu.Lock()
 	defer dataMu.Unlock()
 
