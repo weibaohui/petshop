@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"petshop/internal/logger"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -21,15 +23,36 @@ var ErrMissingJWTSecret = errors.New("JWT_SECRET_KEY environment variable is not
 // defaultJWTSecretKey is used only in development when JWT_SECRET_KEY is not set
 const defaultJWTSecretKey = "dev-only-256-bit-secret-key-do-not-use-in-prod"
 
+// isDevelopment returns true if APP_ENV is set to "development"
+func isDevelopment() bool {
+	return os.Getenv("APP_ENV") == "development"
+}
+
 // GetJWTSecretKey returns the JWT secret key from environment variable
-// Falls back to development default if not set, but enforces minimum 32 bytes length
+// Falls back to development default only if APP_ENV is "development"
+// In production, returns error if JWT_SECRET_KEY is not set or is too short
 func GetJWTSecretKey() ([]byte, error) {
 	secret := os.Getenv("JWT_SECRET_KEY")
 	if secret == "" {
-		secret = defaultJWTSecretKey
+		if isDevelopment() {
+			secret = defaultJWTSecretKey
+			logger.Warn("using default JWT secret key in development mode", map[string]interface{}{
+				"warning": "do not use default key in production",
+			})
+		} else {
+			return nil, ErrMissingJWTSecret
+		}
 	}
 	if len(secret) < 32 {
-		return nil, errors.New("JWT_SECRET_KEY must be at least 32 bytes long")
+		if isDevelopment() {
+			logger.Warn("JWT_SECRET_KEY is too short, using default key in development mode", map[string]interface{}{
+				"warning":    "provided key length too short",
+				"key_length": len(secret),
+			})
+			secret = defaultJWTSecretKey
+		} else {
+			return nil, errors.New("JWT_SECRET_KEY must be at least 32 bytes long")
+		}
 	}
 	return []byte(secret), nil
 }
@@ -58,7 +81,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		secretKey, err := GetJWTSecretKey()
 		if err != nil {
-			http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
+			logger.Error("failed to get JWT secret key", map[string]interface{}{
+				"error": err.Error(),
+			})
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 

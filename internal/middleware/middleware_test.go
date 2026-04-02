@@ -4,9 +4,15 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("APP_ENV", "development")
+	m.Run()
+}
 
 func TestAuthMiddleware_NoAuthHeader(t *testing.T) {
 	handler := AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
