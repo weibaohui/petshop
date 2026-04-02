@@ -107,12 +107,18 @@ func TestAuthMiddleware_RawToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_InvalidUserID(t *testing.T) {
+	// 生成一个可解析但 userID 为 0（非法）的 token
+	token, err := GenerateToken(0)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
 	handler := AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	req.Header.Set("Authorization", "Bearer invalid-token")
+	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
