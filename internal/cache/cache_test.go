@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -256,8 +257,25 @@ func TestCache_Eviction(t *testing.T) {
 
 	// 每次 Set 触发 evictOldest，依次淘汰最老的过期项
 	c.Set("new1", "value1")
+
+	// 验证 old1 已被移除（最早过期）
+	if _, found := c.Get("old1"); found {
+		t.Error("expected old1 to be evicted after first Set")
+	}
+
 	c.Set("new2", "value2")
+
+	// 验证 old2 已被移除（第二早过期）
+	if _, found := c.Get("old2"); found {
+		t.Error("expected old2 to be evicted after second Set")
+	}
+
 	c.Set("new3", "value3")
+
+	// 验证 old3 已被移除（第三早过期）
+	if _, found := c.Get("old3"); found {
+		t.Error("expected old3 to be evicted after third Set")
+	}
 
 	// 淘汰后 size 不超过 maxSize
 	if len(c.items) > c.maxSize {
@@ -368,8 +386,8 @@ func TestGenerateKey(t *testing.T) {
 	}
 
 	key4 := generateKey("prefix", "arg")
-	if key4[:7] != "prefix:" {
-		t.Errorf("prefix未正确附加: %q", key4)
+	if !strings.HasPrefix(key4, "prefix:") {
+		t.Errorf("expected key to have prefix 'prefix:', got %q", key4)
 	}
 
 	for _, tt := range tests {
@@ -394,16 +412,44 @@ func TestPetCache(t *testing.T) {
 		t.Fatal("PetCache.Cache is nil")
 	}
 
+	// 验证构造函数参数正确记录到实例字段
+	if c.maxSize != 50 {
+		t.Errorf("PetCache maxSize = %d, want 50", c.maxSize)
+	}
+	if c.expiration != time.Minute {
+		t.Errorf("PetCache expiration = %v, want 1m", c.expiration)
+	}
+
 	// GetPetKey生成正确key格式
 	petKey := GetPetKey(123)
-	if petKey[:4] != "pet:" {
+	if !strings.HasPrefix(petKey, "pet:") {
 		t.Errorf("GetPetKey prefix incorrect: %q", petKey)
+	}
+	// 验证 GetPetKey 生成确定性的key（相同输入产生相同输出）
+	petKey2 := GetPetKey(123)
+	if petKey != petKey2 {
+		t.Errorf("GetPetKey(123) inconsistent: %q vs %q", petKey, petKey2)
+	}
+	// 验证不同id生成不同key
+	petKeyDifferent := GetPetKey(456)
+	if petKey == petKeyDifferent {
+		t.Errorf("GetPetKey should generate different keys for different ids: both %q", petKey)
 	}
 
 	// GetPetsListKey生成正确key格式
 	listKey := GetPetsListKey(1, 10, "cat")
-	if listKey[:10] != "pets_list:" {
+	if !strings.HasPrefix(listKey, "pets_list:") {
 		t.Errorf("GetPetsListKey prefix incorrect: %q", listKey)
+	}
+	// 验证 GetPetsListKey 生成确定性的key（相同参数产生相同输出）
+	listKey2 := GetPetsListKey(1, 10, "cat")
+	if listKey != listKey2 {
+		t.Errorf("GetPetsListKey(1, 10, \"cat\") inconsistent: %q vs %q", listKey, listKey2)
+	}
+	// 验证不同参数生成不同key
+	listKeyDifferent := GetPetsListKey(2, 10, "cat")
+	if listKey == listKeyDifferent {
+		t.Errorf("GetPetsListKey should generate different keys for different page: both %q", listKey)
 	}
 
 	// 相同参数生成相同key
