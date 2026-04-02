@@ -161,6 +161,9 @@ func TestOrder_ListOrders(t *testing.T) {
 }
 
 func TestOrder_ListOrders_Empty(t *testing.T) {
+	resetOrderData()
+	t.Cleanup(resetOrderData)
+
 	dataMu.Lock()
 	orders = make(map[int64]*models.Order)
 	dataMu.Unlock()
@@ -367,37 +370,40 @@ func TestOrder_UpdateOrderStatus(t *testing.T) {
 
 func TestOrder_ProcessRefund(t *testing.T) {
 	tests := []struct {
-		name              string
-		setup             func()
-		requestBody       string
-		wantStatusCode    int
-		wantErrMsg        string
-		wantStockProduct1 int
-		wantStockProduct2 int
-		wantLogCount      int
-		wantLogReason     string
+		name                 string
+		setup                func()
+		requestBody          string
+		wantStatusCode       int
+		wantErrMsg           string
+		wantStockProduct1    int
+		wantStockProduct2    int
+		wantLogCount         int
+		wantLogReason        string
+		expectedRefundReason string
 	}{
 		{
 			name: "process refund successfully",
 			setup: func() {
 				resetOrderData()
 			},
-			requestBody:       `{"orderId":1,"reason":"质量问题"}`,
-			wantStatusCode:    http.StatusOK,
-			wantStockProduct1: 51, // 50 + 1
-			wantLogCount:      1,
-			wantLogReason:     "退款返还: 订单1",
+			requestBody:          `{"orderId":1,"reason":"质量问题"}`,
+			wantStatusCode:       http.StatusOK,
+			wantStockProduct1:    51, // 50 + 1
+			wantLogCount:         1,
+			wantLogReason:        "退款返还: 订单1",
+			expectedRefundReason: "质量问题",
 		},
 		{
 			name: "process refund for order with multiple products",
 			setup: func() {
 				resetOrderData()
 			},
-			requestBody:       `{"orderId":3,"reason":"缺货"}`,
-			wantStatusCode:    http.StatusOK,
-			wantStockProduct1: 52, // 50 + 2
-			wantStockProduct2: 9,  // 8 + 1
-			wantLogCount:      2,
+			requestBody:          `{"orderId":3,"reason":"缺货"}`,
+			wantStatusCode:       http.StatusOK,
+			wantStockProduct1:    52, // 50 + 2
+			wantStockProduct2:    9,  // 8 + 1
+			wantLogCount:         2,
+			expectedRefundReason: "缺货",
 		},
 		{
 			name: "missing request body",
@@ -446,10 +452,11 @@ func TestOrder_ProcessRefund(t *testing.T) {
 				nextOrderID = 5
 				dataMu.Unlock()
 			},
-			requestBody:       `{"orderId":4,"reason":"测试混合商品退款"}`,
-			wantStatusCode:    http.StatusOK,
-			wantStockProduct1: 51, // 50 + 1
-			wantLogCount:      1,
+			requestBody:          `{"orderId":4,"reason":"测试混合商品退款"}`,
+			wantStatusCode:       http.StatusOK,
+			wantStockProduct1:    51, // 50 + 1
+			wantLogCount:         1,
+			expectedRefundReason: "测试混合商品退款",
 		},
 	}
 
@@ -472,9 +479,6 @@ func TestOrder_ProcessRefund(t *testing.T) {
 				assert.Equal(t, "refund processed", response["message"])
 
 				// verify order status updated
-				var orderID int64
-				json.Unmarshal([]byte(tt.requestBody), &struct{ OrderID *int64 }{&orderID})
-				// re-parse to get orderId
 				var reqBody struct {
 					OrderID int64 `json:"orderId"`
 				}
@@ -486,7 +490,7 @@ func TestOrder_ProcessRefund(t *testing.T) {
 				dataMu.RUnlock()
 				require.True(t, ok)
 				assert.Equal(t, "refunded", o.Status)
-				assert.Contains(t, o.RefundReason, "")
+				assert.Equal(t, tt.expectedRefundReason, o.RefundReason)
 				// stock verification
 				dataMu.RLock()
 				if tt.wantStockProduct1 > 0 {
