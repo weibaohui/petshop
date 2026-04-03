@@ -208,6 +208,13 @@ func TestOrderAndOrderItemStruct(t *testing.T) {
 		assert.Equal(t, order.Status, decoded.Status)
 		assert.Equal(t, order.CreatedAt, decoded.CreatedAt)
 		assert.Equal(t, order.UpdatedAt, decoded.UpdatedAt)
+
+		// Verify refundReason field is omitted when empty (omitempty behavior)
+		var jsonMap map[string]json.RawMessage
+		err = json.Unmarshal(data, &jsonMap)
+		assert.NoError(t, err)
+		_, exists := jsonMap["refundReason"]
+		assert.False(t, exists, "refundReason should not exist in JSON when RefundReason is empty")
 	})
 
 	t.Run("Order with refund reason", func(t *testing.T) {
@@ -231,6 +238,17 @@ func TestOrderAndOrderItemStruct(t *testing.T) {
 
 		assert.Equal(t, "refunded", decoded.Status)
 		assert.Equal(t, "Customer request", decoded.RefundReason)
+
+		// Verify refundReason field exists and has correct value when non-empty (omitempty behavior)
+		var jsonMap map[string]json.RawMessage
+		err = json.Unmarshal(data, &jsonMap)
+		assert.NoError(t, err)
+		refundReasonRaw, exists := jsonMap["refundReason"]
+		assert.True(t, exists, "refundReason should exist in JSON when RefundReason is non-empty")
+		var refundReasonValue string
+		err = json.Unmarshal(refundReasonRaw, &refundReasonValue)
+		assert.NoError(t, err)
+		assert.Equal(t, "Customer request", refundReasonValue)
 	})
 
 	t.Run("Order JSON deserialization from JSON string", func(t *testing.T) {

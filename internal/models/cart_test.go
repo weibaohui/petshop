@@ -294,6 +294,13 @@ func TestCartResponseStruct(t *testing.T) {
 		assert.Equal(t, resp.Success, decoded.Success)
 		assert.Equal(t, resp.Message, decoded.Message)
 		assert.Nil(t, decoded.Cart)
+
+		// Verify cart field is omitted when Cart is nil (omitempty behavior)
+		var jsonMap map[string]json.RawMessage
+		err = json.Unmarshal(data, &jsonMap)
+		assert.NoError(t, err)
+		_, exists := jsonMap["cart"]
+		assert.False(t, exists, "cart should not exist in JSON when Cart is nil")
 	})
 
 	t.Run("CartResponse JSON deserialization from JSON string", func(t *testing.T) {
