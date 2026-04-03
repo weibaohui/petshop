@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -246,6 +247,12 @@ func setupRoutes(mux *http.ServeMux) {
 
 	// Setup system config routes
 	setupConfigRoutes(mux)
+
+	// Setup API token management routes
+	setupAPITokenRoutes(mux)
+
+	// Setup open API routes (public API with token auth)
+	setupOpenAPIRoutes(mux)
 }
 
 // setupAdminRoutes registers admin API routes
@@ -383,6 +390,93 @@ func setupCartRoutes(mux *http.ServeMux) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+}
+
+// setupAPITokenRoutes registers API token management routes (admin only)
+func setupAPITokenRoutes(mux *http.ServeMux) {
+	// Token management - requires JWT auth (admin)
+	mux.Handle("/api/admin/tokens", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.ListAPITokens(w, r)
+		case http.MethodPost:
+			handlers.CreateAPIToken(w, r)
+		default:
+			w.Header().Set("Allow", "GET, POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})))
+
+	mux.Handle("/api/admin/token", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			handlers.UpdateAPITokenStatus(w, r)
+		case http.MethodDelete:
+			handlers.DeleteAPIToken(w, r)
+		default:
+			w.Header().Set("Allow", "PUT, DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})))
+}
+
+// setupOpenAPIRoutes registers public API routes with API token authentication
+func setupOpenAPIRoutes(mux *http.ServeMux) {
+	// Open API endpoints - requires API token auth
+	openAPIHandler := middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Return basic info about the API
+		response := map[string]interface{}{
+			"message":    "Welcome to PetShop Open API",
+			"version":    "v1",
+			"endpoints": []string{
+				"GET /api/open/pets - List all pets",
+				"GET /api/open/pets/{id} - Get pet by ID",
+				"GET /api/open/categories - Get all categories",
+			},
+		}
+		json.NewEncoder(w).Encode(response)
+	}))
+	mux.Handle("/api/open", openAPIHandler)
+
+	// List pets - open API
+	mux.Handle("/api/open/pets", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handlers.ListPets(w, r)
+		} else {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})))
+
+	// Get pet by ID - open API
+	mux.Handle("/api/open/pets/", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		path := strings.TrimPrefix(r.URL.Path, "/api/open/pets/")
+		parts := strings.Split(path, "/")
+		if len(parts) == 1 && parts[0] != "" {
+			query := r.URL.Query()
+			query.Set("id", parts[0])
+			r.URL.RawQuery = query.Encode()
+			handlers.GetPet(w, r)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	})))
+
+	// Get categories - open API
+	mux.Handle("/api/open/categories", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handlers.GetCategories(w, r)
+		} else {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})))
 }
 
 // setupConfigRoutes registers system config routes
