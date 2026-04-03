@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -51,8 +52,13 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 			stat.Date = monthStart.Format("2006-01")
 			stats = append(stats, stat)
 		}
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid period"})
+		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
 }
 
@@ -148,18 +154,15 @@ func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// 排序
-	for i := 0; i < len(hotList)-1; i++ {
-		for j := i + 1; j < len(hotList); j++ {
-			if hotList[j].SalesCount > hotList[i].SalesCount {
-				hotList[i], hotList[j] = hotList[j], hotList[i]
-			}
-		}
-	}
+	// 排序（使用标准库 sort.Slice）
+	sort.Slice(hotList, func(i, j int) bool {
+		return hotList[i].SalesCount > hotList[j].SalesCount
+	})
 
 	if len(hotList) > limit {
 		hotList = hotList[:limit]
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(hotList)
 }
