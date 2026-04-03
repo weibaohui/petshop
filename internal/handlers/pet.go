@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"strings"
 	"time"
@@ -23,9 +24,143 @@ var (
 	petsMu sync.RWMutex
 	// pets is the in-memory store of pets
 	pets = []models.Pet{
-		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
-		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
-		{ID: 3, Name: "Goldie", Type: "Fish", PhotoUrls: []string{"url3"}, Status: "available"},
+		{
+			ID:         1,
+			Name:       "旺财",
+			Type:       "狗狗",
+			Breed:      "金毛寻回犬",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1552053831-71594a27632d?w=400", "https://images.unsplash.com/photo-1633722715463-d30f4f325e24?w=400"},
+			Status:     "available",
+			Age:        6,
+			AgeDisplay: "6个月",
+			Price:      3500,
+			Description: "活泼可爱的金毛宝宝，性格温顺，适合家庭饲养。已完成基础训练，会坐下、握手等基本指令。",
+			HealthStatus: "健康状况良好，已完成体内外驱虫",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "狂犬疫苗", Date: "2024-01-15", Completed: true},
+				{Name: "六联疫苗", Date: "2024-02-01", Completed: true},
+			},
+			CreatedAt: "2024-01-10",
+		},
+		{
+			ID:         2,
+			Name:       "咪咪",
+			Type:       "猫咪",
+			Breed:      "英国短毛猫",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400", "https://images.unsplash.com/photo-1513245543132-31f507417b26?w=400"},
+			Status:     "available",
+			Age:        4,
+			AgeDisplay: "4个月",
+			Price:      2800,
+			Description: "蓝白英短，品相极佳，毛色亮丽。性格粘人，喜欢在主人怀里睡觉。",
+			HealthStatus: "健康状况优秀，定期体检",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "猫三联", Date: "2024-02-10", Completed: true},
+				{Name: "狂犬疫苗", Date: "2024-02-25", Completed: false},
+			},
+			CreatedAt: "2024-02-01",
+		},
+		{
+			ID:         3,
+			Name:       "小白",
+			Type:       "狗狗",
+			Breed:      "萨摩耶",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1529429617124-95b109e86bb8?w=400"},
+			Status:     "pending",
+			Age:        8,
+			AgeDisplay: "8个月",
+			Price:      4200,
+			Description: "微笑天使萨摩耶，雪白蓬松的毛发，性格活泼亲人。",
+			HealthStatus: "健康状况良好",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "狂犬疫苗", Date: "2024-01-20", Completed: true},
+				{Name: "八联疫苗", Date: "2024-02-05", Completed: true},
+			},
+			CreatedAt: "2024-01-15",
+		},
+		{
+			ID:         4,
+			Name:       "豆豆",
+			Type:       "猫咪",
+			Breed:      "布偶猫",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=400"},
+			Status:     "available",
+			Age:        12,
+			AgeDisplay: "1岁",
+			Price:      5500,
+			Description: "海双布偶猫，蓝宝石般的眼睛，性格温柔如布偶。",
+			HealthStatus: "健康状况优秀，已绝育",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "猫三联", Date: "2024-01-05", Completed: true},
+				{Name: "狂犬疫苗", Date: "2024-01-20", Completed: true},
+			},
+			CreatedAt: "2024-01-05",
+		},
+		{
+			ID:         5,
+			Name:       "球球",
+			Type:       "鸟类",
+			Breed:      "虎皮鹦鹉",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=400"},
+			Status:     "available",
+			Age:        3,
+			AgeDisplay: "3个月",
+			Price:      180,
+			Description: "色彩鲜艳的虎皮鹦鹉，聪明好学，可以学说话。",
+			HealthStatus: "健康状况良好",
+			VaccinationRecords: []models.VaccinationRecord{},
+			CreatedAt: "2024-03-01",
+		},
+		{
+			ID:         6,
+			Name:       "小黑",
+			Type:       "狗狗",
+			Breed:      "拉布拉多",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1591769225440-811ad7d6eca6?w=400"},
+			Status:     "sold",
+			Age:        10,
+			AgeDisplay: "10个月",
+			Price:      3800,
+			Description: "聪明伶俐的黑色拉布拉多，导盲犬潜质。",
+			HealthStatus: "健康状况优秀",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "狂犬疫苗", Date: "2024-01-10", Completed: true},
+				{Name: "八联疫苗", Date: "2024-01-25", Completed: true},
+			},
+			CreatedAt: "2024-01-08",
+		},
+		{
+			ID:         7,
+			Name:       "橘橘",
+			Type:       "猫咪",
+			Breed:      "橘猫",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400"},
+			Status:     "available",
+			Age:        5,
+			AgeDisplay: "5个月",
+			Price:      500,
+			Description: "胖乎乎的橘猫，爱吃爱玩，性格超好。",
+			HealthStatus: "健康状况良好",
+			VaccinationRecords: []models.VaccinationRecord{
+				{Name: "猫三联", Date: "2024-02-15", Completed: true},
+			},
+			CreatedAt: "2024-02-10",
+		},
+		{
+			ID:         8,
+			Name:       "豆豆",
+			Type:       "其他",
+			Breed:      "垂耳兔",
+			PhotoUrls:  []string{"https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=400"},
+			Status:     "available",
+			Age:        4,
+			AgeDisplay: "4个月",
+			Price:      350,
+			Description: "可爱的垂耳兔，毛茸茸软绵绵，很亲人。",
+			HealthStatus: "健康状况良好",
+			VaccinationRecords: []models.VaccinationRecord{},
+			CreatedAt: "2024-02-20",
+		},
 	}
 	// petCache provides caching for pet data
 	petCache *cache.PetCache
@@ -486,4 +621,99 @@ func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"hit_rate": petCache.HitRate(),
 	})
+}
+
+// GetCategories returns all pet categories
+func GetCategories(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(models.Categories())
+}
+
+// FilterPets filters pets by multiple criteria
+func FilterPets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	query := r.URL.Query()
+	typeParam := query.Get("type")
+	statusParam := query.Get("status")
+	searchParam := query.Get("search")
+	minPriceStr := query.Get("minPrice")
+	maxPriceStr := query.Get("maxPrice")
+	page := pagination.ParsePagination(r)
+
+	var minPrice, maxPrice float64
+	var hasMinPrice, hasMaxPrice bool
+	if minPriceStr != "" {
+		var err error
+		minPrice, err = strconv.ParseFloat(minPriceStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid minPrice"})
+			return
+		}
+		hasMinPrice = true
+	}
+	if maxPriceStr != "" {
+		var err error
+		maxPrice, err = strconv.ParseFloat(maxPriceStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid maxPrice"})
+			return
+		}
+		hasMaxPrice = true
+	}
+
+	petsMu.RLock()
+	defer petsMu.RUnlock()
+
+	var filtered []models.Pet
+	for _, pet := range pets {
+		// Filter by type
+		if typeParam != "" && !strings.EqualFold(pet.Type, typeParam) {
+			continue
+		}
+		// Filter by status
+		if statusParam != "" && !strings.EqualFold(pet.Status, statusParam) {
+			continue
+		}
+		// Filter by price
+		if hasMinPrice && pet.Price < minPrice {
+			continue
+		}
+		if hasMaxPrice && pet.Price > maxPrice {
+			continue
+		}
+		// Search by name or breed
+		if searchParam != "" {
+			searchLower := strings.ToLower(searchParam)
+			if !strings.Contains(strings.ToLower(pet.Name), searchLower) &&
+				!strings.Contains(strings.ToLower(pet.Breed), searchLower) {
+				continue
+			}
+		}
+		filtered = append(filtered, pet)
+	}
+
+	// Convert to interface slice for pagination
+	items := make([]interface{}, len(filtered))
+	for i, pet := range filtered {
+		items[i] = pet
+	}
+
+	pagedPage, pagedItems := pagination.Paginate(items, page.Page, page.PageSize)
+
+	// Convert back to Pet slice
+	result := make([]models.Pet, len(pagedItems))
+	for i, item := range pagedItems {
+		result[i] = item.(models.Pet)
+	}
+
+	petLogger.Info("filter pets", map[string]interface{}{
+		"type":   typeParam,
+		"search": searchParam,
+		"total":  pagedPage.Total,
+	})
+
+	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }

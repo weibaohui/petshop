@@ -14,6 +14,10 @@ import (
 )
 
 func resetPets() {
+	ResetPetsForTesting()
+	// Override with test data
+	petsMu.Lock()
+	defer petsMu.Unlock()
 	pets = []models.Pet{
 		{ID: 1, Name: "Buddy", Type: "Dog", PhotoUrls: []string{"url1"}, Status: "available"},
 		{ID: 2, Name: "Whiskers", Type: "Cat", PhotoUrls: []string{"url2"}, Status: "available"},
@@ -22,6 +26,7 @@ func resetPets() {
 }
 
 func TestListPets(t *testing.T) {
+	resetPets()
 	defer resetPets()
 	tests := []struct {
 		name           string
@@ -386,4 +391,94 @@ func TestPetHandler(t *testing.T) {
 		assert.Contains(t, w.Header().Get("Allow"), "POST")
 		assert.Contains(t, w.Header().Get("Allow"), "DELETE")
 	})
+}
+
+func TestFilterPets(t *testing.T) {
+	resetPets()
+	defer resetPets()
+
+	tests := []struct {
+		name           string
+		queryString    string
+		wantStatusCode int
+		wantLen        int
+	}{
+		{
+			name:           "filter without criteria returns all pets",
+			queryString:    "",
+			wantStatusCode: http.StatusOK,
+			wantLen:        3,
+		},
+		{
+			name:           "filter by type Dog",
+			queryString:    "?type=Dog",
+			wantStatusCode: http.StatusOK,
+			wantLen:        1,
+		},
+		{
+			name:           "filter by status available",
+			queryString:    "?status=available",
+			wantStatusCode: http.StatusOK,
+			wantLen:        3,
+		},
+		{
+			name:           "filter by price range",
+			queryString:    "?minPrice=10&maxPrice=500",
+			wantStatusCode: http.StatusOK,
+			wantLen:        0, // test data has zero prices
+		},
+		{
+			name:           "invalid minPrice returns 400",
+			queryString:    "?minPrice=abc",
+			wantStatusCode: http.StatusBadRequest,
+			wantLen:        0,
+		},
+		{
+			name:           "invalid maxPrice returns 400",
+			queryString:    "?maxPrice=xyz",
+			wantStatusCode: http.StatusBadRequest,
+			wantLen:        0,
+		},
+		{
+			name:           "search by name",
+			queryString:    "?search=Buddy",
+			wantStatusCode: http.StatusOK,
+			wantLen:        1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/pets"+tt.queryString, nil)
+			w := httptest.NewRecorder()
+
+			FilterPets(w, req)
+
+			assert.Equal(t, tt.wantStatusCode, w.Code)
+
+			if tt.wantStatusCode != http.StatusOK {
+				var errResp map[string]string
+				err := json.NewDecoder(w.Body).Decode(&errResp)
+				assert.NoError(t, err)
+				_, ok := errResp["error"]
+				assert.True(t, ok)
+				return
+			}
+
+			var response pagination.PagedResponse
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+				t.Errorf("FilterPets() failed to decode response: %v", err)
+			}
+
+			data, ok := response.Data.([]interface{})
+			if !ok {
+				t.Errorf("FilterPets() response data is not an array")
+				return
+			}
+
+			if len(data) != tt.wantLen {
+				t.Errorf("FilterPets() got %d pets, want %d", len(data), tt.wantLen)
+			}
+		})
+	}
 }
