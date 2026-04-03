@@ -12,6 +12,7 @@ import {
   Empty,
   Card,
   Slider,
+  Alert,
 } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { PetCard } from '../components/PetCard';
@@ -28,12 +29,15 @@ export function HomePage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState<PetFilter>({
     page: 1,
     pageSize: PAGE_SIZE,
   });
+  // 临时存储价格滑块值，避免频繁触发请求
+  const [tempPriceRange, setTempPriceRange] = useState<[number, number]>([0, 10000]);
 
   useEffect(() => {
     fetchCategories();
@@ -55,13 +59,16 @@ export function HomePage() {
 
   const fetchPets = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await getPets(filter);
       setPets(response.data);
       setTotal(response.page.total);
       setCurrentPage(response.page.page);
-    } catch (error) {
-      console.error('Failed to fetch pets:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '获取宠物列表失败，请稍后重试';
+      setError(errorMessage);
+      console.error('Failed to fetch pets:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +82,13 @@ export function HomePage() {
     setFilter((prev) => ({ ...prev, type: value, page: 1 }));
   };
 
+  // 滑块拖动过程中只更新临时状态，不触发请求
   const handlePriceChange = (value: number[]) => {
+    setTempPriceRange([value[0], value[1]]);
+  };
+
+  // 滑块拖动结束时才更新 filter 触发请求
+  const handlePriceChangeComplete = (value: number[]) => {
     setFilter((prev) => ({
       ...prev,
       minPrice: value[0],
@@ -175,20 +188,34 @@ export function HomePage() {
             </Col>
             <Col xs={24} sm={12} md={10}>
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Text strong>价格区间: ¥{filter.minPrice || 0} - ¥{filter.maxPrice || 10000}</Text>
+                <Text strong>价格区间: ¥{tempPriceRange[0]} - ¥{tempPriceRange[1]}</Text>
                 <Slider
                   range
                   min={0}
                   max={10000}
                   step={100}
-                  defaultValue={[0, 10000]}
+                  value={tempPriceRange}
                   onChange={handlePriceChange}
+                  onChangeComplete={handlePriceChangeComplete}
                   tooltip={{ formatter: (value) => `¥${value}` }}
                 />
               </Space>
             </Col>
           </Row>
         </Card>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert
+            message="加载失败"
+            description={error}
+            type="error"
+            showIcon
+            closable
+            onClose={() => setError(null)}
+            style={{ marginBottom: 24 }}
+          />
+        )}
 
         {/* Pet Grid */}
         <Spin spinning={loading} size="large">

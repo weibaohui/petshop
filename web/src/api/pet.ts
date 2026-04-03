@@ -7,10 +7,10 @@ export async function getPets(filter: PetFilter = {}): Promise<PetsResponse> {
   if (filter.type) params.append('type', filter.type);
   if (filter.status) params.append('status', filter.status);
   if (filter.search) params.append('search', filter.search);
-  if (filter.minPrice) params.append('minPrice', filter.minPrice.toString());
-  if (filter.maxPrice) params.append('maxPrice', filter.maxPrice.toString());
-  if (filter.page) params.append('page', filter.page.toString());
-  if (filter.pageSize) params.append('pageSize', filter.pageSize.toString());
+  if (filter.minPrice !== undefined) params.append('minPrice', filter.minPrice.toString());
+  if (filter.maxPrice !== undefined) params.append('maxPrice', filter.maxPrice.toString());
+  if (filter.page !== undefined) params.append('page', filter.page.toString());
+  if (filter.pageSize !== undefined) params.append('pageSize', filter.pageSize.toString());
 
   const response = await fetch(`${API_BASE_URL}/pets?${params}`);
   if (!response.ok) {

@@ -24,11 +24,14 @@ import { StatusMap } from '../types/pet';
 const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
+type ErrorType = 'network' | 'notfound' | null;
+
 export function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ErrorType>(null);
 
   useEffect(() => {
     if (id) {
@@ -38,12 +41,20 @@ export function PetDetailPage() {
 
   const fetchPet = async (petId: number) => {
     setLoading(true);
+    setError(null);
+    setPet(null); // 请求前清除旧数据
     try {
       const data = await getPetById(petId);
       setPet(data);
-    } catch (error) {
-      console.error('Failed to fetch pet:', error);
-      message.error('加载宠物信息失败');
+    } catch (err) {
+      console.error('Failed to fetch pet:', err);
+      // 区分网络错误和未找到错误
+      if (err instanceof Error && err.message.includes('404')) {
+        setError('notfound');
+      } else {
+        setError('network');
+        message.error('网络错误，请检查网络连接后重试');
+      }
     } finally {
       setLoading(false);
     }
@@ -61,7 +72,26 @@ export function PetDetailPage() {
     );
   }
 
-  if (!pet) {
+  if (error === 'network') {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Empty
+            description={
+              <div>
+                <p>网络错误，无法加载宠物信息</p>
+                <Button type="primary" onClick={() => id && fetchPet(parseInt(id, 10))}>
+                  重新加载
+                </Button>
+              </div>
+            }
+          />
+        </Content>
+      </Layout>
+    );
+  }
+
+  if (error === 'notfound' || !pet) {
     return (
       <Layout style={{ minHeight: '100vh' }}>
         <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
