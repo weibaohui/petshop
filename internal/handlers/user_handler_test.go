@@ -484,7 +484,7 @@ func TestConcurrentUserAccess(t *testing.T) {
 				w := httptest.NewRecorder()
 				UpdateUserStatus(w, req)
 				// 并发更新可能有冲突，但不应该 panic 或死锁
-				assert.Contains(t, []int{http.StatusOK, http.StatusNotFound}, w.Code)
+				assert.Equal(t, http.StatusOK, w.Code)
 			})
 		}
 	})
@@ -503,8 +503,6 @@ func TestUserDataIsolation(t *testing.T) {
 	dataMu.RUnlock()
 
 	assert.Equal(t, 3, userCount)
-	assert.GreaterOrEqual(t, productCount, 0)
-	assert.GreaterOrEqual(t, orderCount, 0)
 
 	// 修改用户数据不应影响其他数据
 	req := httptest.NewRequest(http.MethodPut, "/api/admin/user", strings.NewReader(`{"id":1,"status":"disabled"}`))
@@ -513,8 +511,11 @@ func TestUserDataIsolation(t *testing.T) {
 	UpdateUserStatus(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// 验证用户状态已更新
+	// 验证用户状态已更新，且其他数据未被影响
 	dataMu.RLock()
 	assert.Equal(t, "disabled", users[1].Status)
+	assert.Equal(t, 3, len(users), "用户数量应该保持不变")
+	assert.Equal(t, productCount, len(products), "products 长度应该保持不变")
+	assert.Equal(t, orderCount, len(orders), "orders 长度应该保持不变")
 	dataMu.RUnlock()
 }
