@@ -60,6 +60,20 @@ func createTables() error {
 		UNIQUE(user_id, product_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart_items(user_id);
+
+	CREATE TABLE IF NOT EXISTS api_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		token_hash TEXT NOT NULL UNIQUE,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'active',
+		last_used_at DATETIME,
+		expires_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_api_token_hash ON api_tokens(token_hash);
+	CREATE INDEX IF NOT EXISTS idx_api_token_status ON api_tokens(status);
 	`
 	_, err := db.Exec(schema)
 	return err

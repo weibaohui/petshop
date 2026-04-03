@@ -246,6 +246,12 @@ func setupRoutes(mux *http.ServeMux) {
 
 	// Setup system config routes
 	setupConfigRoutes(mux)
+
+	// Setup API token management routes
+	setupAPITokenRoutes(mux)
+
+	// Setup open API routes (with API key auth)
+	setupOpenAPIRoutes(mux)
 }
 
 // setupAdminRoutes registers admin API routes
@@ -452,4 +458,65 @@ func setupConfigRoutes(mux *http.ServeMux) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
+}
+
+// setupAPITokenRoutes registers API token management routes
+func setupAPITokenRoutes(mux *http.ServeMux) {
+	// List tokens
+	mux.HandleFunc("/api/admin/tokens", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.ListAPITokens(w, r)
+		case http.MethodPost:
+			handlers.CreateAPIToken(w, r)
+		default:
+			w.Header().Set("Allow", "GET, POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Update token status
+	mux.HandleFunc("/api/admin/token/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			handlers.UpdateAPITokenStatus(w, r)
+		} else {
+			w.Header().Set("Allow", "PUT")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Delete token
+	mux.HandleFunc("/api/admin/token", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			handlers.DeleteAPIToken(w, r)
+		} else {
+			w.Header().Set("Allow", "DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+}
+
+// setupOpenAPIRoutes registers open API routes with API key authentication
+func setupOpenAPIRoutes(mux *http.ServeMux) {
+	// Create handler with API key auth middleware
+	openAPIHandler := middleware.APIKeyAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/open/pets":
+			handlers.ListPets(w, r)
+		case "/api/v1/open/pet":
+			handlers.GetPet(w, r)
+		case "/api/v1/open/products":
+			handlers.ListProducts(w, r)
+		case "/api/v1/open/product":
+			handlers.GetProduct(w, r)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	// Register open API routes
+	mux.Handle("/api/v1/open/pets", openAPIHandler)
+	mux.Handle("/api/v1/open/pet", openAPIHandler)
+	mux.Handle("/api/v1/open/products", openAPIHandler)
+	mux.Handle("/api/v1/open/product", openAPIHandler)
 }
