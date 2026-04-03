@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"sync"
 	"strings"
 	"time"
@@ -642,10 +643,22 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 
 	var minPrice, maxPrice float64
 	if minPriceStr != "" {
-		fmt.Sscanf(minPriceStr, "%f", &minPrice)
+		var err error
+		minPrice, err = strconv.ParseFloat(minPriceStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid minPrice"})
+			return
+		}
 	}
 	if maxPriceStr != "" {
-		fmt.Sscanf(maxPriceStr, "%f", &maxPrice)
+		var err error
+		maxPrice, err = strconv.ParseFloat(maxPriceStr, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "invalid maxPrice"})
+			return
+		}
 	}
 
 	petsMu.RLock()

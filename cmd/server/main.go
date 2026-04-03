@@ -146,14 +146,35 @@ func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 func setupRoutes(mux *http.ServeMux) {
 	// Pet routes
 	mux.HandleFunc("/api/pets", handlers.ListPets)
-	mux.HandleFunc("/api/v1/pets", handlers.FilterPets)
-	mux.HandleFunc("/api/v1/categories", handlers.GetCategories)
+	mux.HandleFunc("/api/v1/pets", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		handlers.FilterPets(w, r)
+	})
+	mux.HandleFunc("/api/v1/categories", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		handlers.GetCategories(w, r)
+	})
 	// Handle /api/v1/pets/:id
 	mux.HandleFunc("/api/v1/pets/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pets/")
 		parts := strings.Split(path, "/")
-		if len(parts) >= 1 && parts[0] != "" {
-			r.URL.RawQuery = "id=" + parts[0]
+		if len(parts) == 1 && parts[0] != "" {
+			query := r.URL.Query()
+			query.Set("id", parts[0])
+			r.URL.RawQuery = query.Encode()
 			handlers.GetPet(w, r)
 		} else {
 			w.WriteHeader(http.StatusNotFound)

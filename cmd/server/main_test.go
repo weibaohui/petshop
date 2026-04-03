@@ -191,6 +191,51 @@ func TestMethodNotAllowed(t *testing.T) {
 	}
 }
 
+// TestV1PetRoutes tests v1 pet routes for method restrictions and path validation
+func TestV1PetRoutes(t *testing.T) {
+	handler, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	tests := []struct {
+		name           string
+		method         string
+		path           string
+		expectedStatus int
+		expectedAllow  string
+	}{
+		{"FilterPets GET allowed", "GET", "/api/v1/pets", http.StatusOK, ""},
+		{"FilterPets POST not allowed", "POST", "/api/v1/pets", http.StatusMethodNotAllowed, "GET"},
+		{"FilterPets PUT not allowed", "PUT", "/api/v1/pets", http.StatusMethodNotAllowed, "GET"},
+		{"GetCategories GET allowed", "GET", "/api/v1/categories", http.StatusOK, ""},
+		{"GetCategories POST not allowed", "POST", "/api/v1/categories", http.StatusMethodNotAllowed, "GET"},
+		{"GetPetByPath GET allowed", "GET", "/api/v1/pets/1", http.StatusOK, ""},
+		{"GetPetByPath with query params", "GET", "/api/v1/pets/1?foo=bar", http.StatusOK, ""},
+		{"GetPetByPath POST not allowed", "POST", "/api/v1/pets/1", http.StatusMethodNotAllowed, "GET"},
+		{"GetPetByPath invalid extra path", "GET", "/api/v1/pets/1/extra", http.StatusNotFound, ""},
+		{"GetPetByPath too many parts", "GET", "/api/v1/pets/1/extra/more", http.StatusNotFound, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			rr := httptest.NewRecorder()
+
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+
+			if tt.expectedAllow != "" {
+				allowHeader := rr.Header().Get("Allow")
+				if allowHeader != tt.expectedAllow {
+					t.Errorf("Expected Allow header %q, got %q", tt.expectedAllow, allowHeader)
+				}
+			}
+		})
+	}
+}
+
 // TestMiddlewareChain tests that middleware is properly applied
 func TestMiddlewareChain(t *testing.T) {
 	handler, cleanup := setupTestServer(t)
