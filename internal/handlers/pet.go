@@ -642,6 +642,7 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 	page := pagination.ParsePagination(r)
 
 	var minPrice, maxPrice float64
+	var hasMinPrice, hasMaxPrice bool
 	if minPriceStr != "" {
 		var err error
 		minPrice, err = strconv.ParseFloat(minPriceStr, 64)
@@ -650,6 +651,7 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(map[string]string{"error": "invalid minPrice"})
 			return
 		}
+		hasMinPrice = true
 	}
 	if maxPriceStr != "" {
 		var err error
@@ -659,6 +661,7 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(map[string]string{"error": "invalid maxPrice"})
 			return
 		}
+		hasMaxPrice = true
 	}
 
 	petsMu.RLock()
@@ -675,10 +678,10 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		// Filter by price
-		if minPrice > 0 && pet.Price < minPrice {
+		if hasMinPrice && pet.Price < minPrice {
 			continue
 		}
-		if maxPrice > 0 && pet.Price > maxPrice {
+		if hasMaxPrice && pet.Price > maxPrice {
 			continue
 		}
 		// Search by name or breed

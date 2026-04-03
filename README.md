@@ -27,7 +27,7 @@
 
 ## 项目结构
 
-```
+```text
 .
 ├── cmd/server/          # 后端入口
 ├── internal/            # 后端内部包
@@ -125,9 +125,9 @@ npm run dev
 # 后端测试
 go test ./...
 
-# 前端测试
+# 前端代码检查
 cd web
-npm test
+npm run lint
 ```
 
 ### 构建
