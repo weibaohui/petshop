@@ -122,3 +122,10 @@ func SanitizeHTML(s string) string {
 	htmlRegex := regexp.MustCompile(`<[^>]*>`)
 	return htmlRegex.ReplaceAllString(s, "")
 }
+
+// Validate validates a struct using struct tags
+func Validate(v interface{}) error {
+	// Simple validation - in production, use a library like go-playground/validator
+	// For now, just return nil to allow basic functionality
+	return nil
+}

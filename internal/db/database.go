@@ -62,7 +62,12 @@ func createTables() error {
 	CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart_items(user_id);
 	`
 	_, err := db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Initialize API Token table
+	return InitAPITokenTable()
 }
 
 // Close closes the database connection
