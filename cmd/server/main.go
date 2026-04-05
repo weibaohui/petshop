@@ -94,6 +94,9 @@ func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	// Setup routes
 	setupRoutes(mux)
 
+	// Register health check endpoint
+	registerRoute(mux, "/health", handlers.HealthCheck)
+
 	// Create HTTP server
 	srv := &http.Server{
 		Addr:    config.addr,
