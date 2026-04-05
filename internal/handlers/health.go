@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -58,8 +59,11 @@ func checkDatabase() bool {
 		return false
 	}
 
-	// Execute simple query to verify connection
+	// Execute simple query with timeout to verify connection
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	var result int
-	err := database.QueryRow("SELECT 1").Scan(&result)
+	err := database.QueryRowContext(ctx, "SELECT 1").Scan(&result)
 	return err == nil && result == 1
 }

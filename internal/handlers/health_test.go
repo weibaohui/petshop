@@ -14,10 +14,11 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-	// Initialize test database
+	// Reset and initialize test database
+	db.ResetForTesting()
 	err := db.InitDB(":memory:")
 	require.NoError(t, err)
-	defer db.ResetForTesting()
+	t.Cleanup(db.ResetForTesting)
 
 	tests := []struct {
 		name               string
@@ -95,10 +96,11 @@ func TestHealthCheckWithDBDisconnected(t *testing.T) {
 }
 
 func TestHealthCheckResponseStructure(t *testing.T) {
-	// Initialize test database
+	// Reset and initialize test database
+	db.ResetForTesting()
 	err := db.InitDB(":memory:")
 	require.NoError(t, err)
-	defer db.ResetForTesting()
+	t.Cleanup(db.ResetForTesting)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
@@ -124,10 +126,11 @@ func TestHealthCheckResponseStructure(t *testing.T) {
 
 func TestCheckDatabase(t *testing.T) {
 	t.Run("database is healthy when initialized", func(t *testing.T) {
-		// Initialize test database
+		// Reset and initialize test database
+		db.ResetForTesting()
 		err := db.InitDB(":memory:")
 		require.NoError(t, err)
-		defer db.ResetForTesting()
+		t.Cleanup(db.ResetForTesting)
 
 		healthy := checkDatabase()
 		assert.True(t, healthy)
