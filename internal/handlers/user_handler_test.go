@@ -496,10 +496,11 @@ func TestUserDataIsolation(t *testing.T) {
 	t.Cleanup(resetUsers)
 
 	// 验证 users map 与其他数据隔离
+	// 在用户更新前捕获 product 和 order 数量
 	dataMu.RLock()
 	userCount := len(users)
-	productCount := len(products)
-	orderCount := len(orders)
+	preUpdateProductCount := len(products)
+	preUpdateOrderCount := len(orders)
 	dataMu.RUnlock()
 
 	assert.Equal(t, 3, userCount)
@@ -515,7 +516,7 @@ func TestUserDataIsolation(t *testing.T) {
 	dataMu.RLock()
 	assert.Equal(t, "disabled", users[1].Status)
 	assert.Equal(t, 3, len(users), "用户数量应该保持不变")
-	assert.Equal(t, productCount, len(products), "products 长度应该保持不变")
-	assert.Equal(t, orderCount, len(orders), "orders 长度应该保持不变")
+	assert.Equal(t, preUpdateProductCount, len(products), "products 长度应该保持不变")
+	assert.Equal(t, preUpdateOrderCount, len(orders), "orders 长度应该保持不变")
 	dataMu.RUnlock()
 }
