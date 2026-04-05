@@ -480,7 +480,6 @@ func TestGenerateRandomToken(t *testing.T) {
 		require.NoError(t, err)
 		token2, err := generateRandomToken()
 		require.NoError(t, err)
-
 		// Should start with psk_
 		assert.True(t, strings.HasPrefix(token1, "psk_"))
 		assert.True(t, strings.HasPrefix(token2, "psk_"))
