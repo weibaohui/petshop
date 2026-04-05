@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"log"
 	"time"
 
 	"petshop/internal/models"
@@ -97,7 +98,7 @@ func (r *APITokenRepository) List(limit, offset int) ([]models.APIToken, int64, 
 	}
 	defer rows.Close()
 
-	var tokens []models.APIToken
+	tokens := make([]models.APIToken, 0)
 	for rows.Next() {
 		var token models.APIToken
 		err := rows.Scan(&token.ID, &token.Name, &token.TokenHash, &token.Description, &token.Status,
@@ -158,7 +159,11 @@ func (r *APITokenRepository) ValidateToken(token string) (*models.APIToken, erro
 	}
 
 	// 更新最后使用时间（异步）
-	go r.UpdateLastUsedAt(t.ID)
+	go func(tokenID int64) {
+		if err := r.UpdateLastUsedAt(tokenID); err != nil {
+			log.Printf("failed to update last_used_at for token %d: %v", tokenID, err)
+		}
+	}(t.ID)
 
 	return t, nil
 }
