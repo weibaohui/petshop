@@ -116,7 +116,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				return nil, jwt.ErrSignatureInvalid
 			}
 			return secretKey, nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 
 		if err != nil {
 			http.Error(w, "unauthorized: invalid token", http.StatusUnauthorized)

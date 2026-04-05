@@ -70,18 +70,15 @@ func createTables() error {
 		last_used_at DATETIME,
 		expires_at DATETIME,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		created_by INTEGER NOT NULL DEFAULT 0,
+		permissions TEXT DEFAULT 'read'
 	);
 	CREATE INDEX IF NOT EXISTS idx_api_token_hash ON api_tokens(token_hash);
 	CREATE INDEX IF NOT EXISTS idx_api_token_status ON api_tokens(status);
 	`
 	_, err := db.Exec(schema)
-	if err != nil {
-		return err
-	}
-
-	// Initialize API Token table
-	return InitAPITokenTable()
+	return err
 }
 
 // Close closes the database connection

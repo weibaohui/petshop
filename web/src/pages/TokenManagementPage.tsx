@@ -57,11 +57,11 @@ export function TokenManagementPage() {
     setLoading(true);
     try {
       const response = await listTokens(page, pageSize);
-      setTokens(response.data);
+      setTokens(response.list);
       setPagination({
-        current: response.pagination.page,
-        pageSize: response.pagination.pageSize,
-        total: response.pagination.total,
+        current: page,
+        pageSize: pageSize,
+        total: response.total,
       });
     } catch (error) {
       message.error(error instanceof Error ? error.message : '加载失败');
@@ -113,9 +113,26 @@ export function TokenManagementPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success('已复制到剪贴板');
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        message.success('已复制到剪贴板');
+      } catch (fallbackErr) {
+        message.error('复制失败，请手动复制');
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -323,7 +340,7 @@ export function TokenManagementPage() {
                 <Button
                   type="primary"
                   icon={<CopyOutlined />}
-                  onClick={() => copyToClipboard(createdToken.token)}
+                  onClick={() => createdToken.token && copyToClipboard(createdToken.token)}
                 >
                   复制
                 </Button>

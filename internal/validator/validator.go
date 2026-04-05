@@ -55,7 +55,7 @@ func ValidatePet(name, petType, status string) ValidationErrors {
 	if strings.TrimSpace(name) == "" {
 		errors = append(errors, ValidationError{Field: "name", Message: "name is required"})
 	} else if len(name) > 100 {
-		errors = append(errors, ValidationError{Field: "name", Message: "name must be less than 100 characters"})
+		errors = append(errors, ValidationError{Field: "name", Message: "name must be at most 100 characters"})
 	}
 
 	if strings.TrimSpace(petType) == "" {

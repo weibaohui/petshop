@@ -132,8 +132,18 @@ func (r *APITokenRepository) List(offset, limit int) ([]models.APIToken, int, er
 // UpdateStatus 更新Token状态
 func (r *APITokenRepository) UpdateStatus(id int64, status string) error {
 	query := "UPDATE api_tokens SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-	_, err := r.db.Exec(query, status, id)
-	return err
+	result, err := r.db.Exec(query, status, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 // Delete 删除Token
