@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,6 +40,11 @@ func TestAbs(t *testing.T) {
 			name:     "大正数",
 			input:    999999,
 			expected: 999999,
+		},
+		{
+			name:     "MinInt溢出",
+			input:    math.MinInt,
+			expected: math.MaxInt, // math.Abs(float64(MinInt)) 因精度丢失返回 MaxInt
 		},
 	}
 
@@ -97,39 +103,34 @@ func TestWriteJSON(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	tests := []struct {
-		name           string
-		status         int
-		message        string
-		expectedStatus int
-		expectedBody   map[string]string
+		name         string
+		status       int
+		message      string
+		expectedBody map[string]string
 	}{
 		{
-			name:           "400错误",
-			status:         http.StatusBadRequest,
-			message:        "invalid request",
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   map[string]string{"error": "invalid request"},
+			name:         "400错误",
+			status:       http.StatusBadRequest,
+			message:      "invalid request",
+			expectedBody: map[string]string{"error": "invalid request"},
 		},
 		{
-			name:           "500错误",
-			status:         http.StatusInternalServerError,
-			message:        "internal server error",
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   map[string]string{"error": "internal server error"},
+			name:         "500错误",
+			status:       http.StatusInternalServerError,
+			message:      "internal server error",
+			expectedBody: map[string]string{"error": "internal server error"},
 		},
 		{
-			name:           "404错误",
-			status:         http.StatusNotFound,
-			message:        "resource not found",
-			expectedStatus: http.StatusNotFound,
-			expectedBody:   map[string]string{"error": "resource not found"},
+			name:         "404错误",
+			status:       http.StatusNotFound,
+			message:      "resource not found",
+			expectedBody: map[string]string{"error": "resource not found"},
 		},
 		{
-			name:           "空错误消息",
-			status:         http.StatusBadRequest,
-			message:        "",
-			expectedStatus: http.StatusBadRequest,
-			expectedBody:   map[string]string{"error": ""},
+			name:         "空错误消息",
+			status:       http.StatusBadRequest,
+			message:      "",
+			expectedBody: map[string]string{"error": ""},
 		},
 	}
 
@@ -138,7 +139,7 @@ func TestWriteError(t *testing.T) {
 			rr := httptest.NewRecorder()
 			writeError(rr, tt.status, tt.message)
 
-			assert.Equal(t, tt.expectedStatus, rr.Code)
+			assert.Equal(t, tt.status, rr.Code)
 			assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 
 			var response map[string]string
