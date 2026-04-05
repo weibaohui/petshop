@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// abs returns the absolute value of an integer
 func abs(x int) int {
 	return int(math.Abs(float64(x)))
 }

@@ -13,6 +13,7 @@ import (
 // APITokenKey is the context key for API token
 type apiTokenContextKey string
 
+// APITokenKey is the context key used to store and retrieve the API token from context
 const APITokenKey apiTokenContextKey = "apiToken"
 
 // APITokenAuthMiddleware validates API token for open API endpoints

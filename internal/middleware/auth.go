@@ -15,6 +15,7 @@ import (
 // UserIDKey is the context key for user ID
 type contextKey string
 
+// UserIDKey is the context key used to store and retrieve the user ID from context
 const UserIDKey contextKey = "userID"
 
 // ErrMissingJWTSecret is returned when JWT_SECRET_KEY environment variable is not set

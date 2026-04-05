@@ -46,6 +46,7 @@ func GetDB() *sql.DB {
 	return db
 }
 
+// createTables creates all database tables including cart_items and api_tokens
 func createTables() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS cart_items (

@@ -12,6 +12,7 @@ type ValidationError struct {
 	Message string `json:"message"`
 }
 
+// Error returns the string representation of the validation error
 func (e ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
@@ -19,6 +20,7 @@ func (e ValidationError) Error() string {
 // ValidationErrors is a collection of validation errors
 type ValidationErrors []ValidationError
 
+// Error returns a concatenated string of all validation errors
 func (e ValidationErrors) Error() string {
 	var msgs []string
 	for _, err := range e {

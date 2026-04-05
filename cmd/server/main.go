@@ -58,14 +58,15 @@ func runWithConfig(config *serverConfig) error {
 	return runWithDependencies(config, nil)
 }
 
-// runWithDependencies runs the server with injectable dependencies for testing
-// signalChan: optional channel to receive shutdown signals (for testing)
-// serverErrorHandler: optional function to handle server errors (for testing)
+// serverDependencies holds injectable dependencies for testing the server
 type serverDependencies struct {
 	signalChan     <-chan os.Signal
 	serverErrorHandler func(error)
 }
 
+// runWithDependencies runs the server with injectable dependencies for testing
+// config: server configuration
+// deps: optional dependencies for testing (signalChan and serverErrorHandler)
 func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	// Initialize logger
 	logger.Init(config.logDir)
