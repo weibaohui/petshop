@@ -28,11 +28,16 @@ func APITokenAuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Extract token (support both "Bearer <token>" and "Token <token>")
-		tokenString := authHeader
+		var tokenString string
 		if strings.HasPrefix(authHeader, "Bearer ") {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 		} else if strings.HasPrefix(authHeader, "Token ") {
 			tokenString = strings.TrimPrefix(authHeader, "Token ")
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error": "unauthorized: invalid authorization format, use 'Bearer token' or 'Token token'"}`))
+			return
 		}
 
 		if tokenString == "" {
@@ -71,8 +76,8 @@ func APITokenAuthMiddleware(next http.Handler) http.Handler {
 }
 
 // GetAPIToken extracts API token from context
-func GetAPIToken(ctx context.Context) (interface{}, bool) {
-	token, ok := ctx.Value(APITokenKey).(interface{})
+func GetAPIToken(ctx context.Context) (*models.APIToken, bool) {
+	token, ok := ctx.Value(APITokenKey).(*models.APIToken)
 	return token, ok
 }
 

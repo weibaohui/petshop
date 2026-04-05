@@ -109,7 +109,7 @@ func (r *APITokenRepository) List(offset, limit int) ([]models.APIToken, int, er
 	}
 	defer rows.Close()
 
-	var tokens []models.APIToken
+	tokens := make([]models.APIToken, 0)
 	for rows.Next() {
 		token := models.APIToken{}
 		var expiresAt, lastUsedAt sql.NullTime

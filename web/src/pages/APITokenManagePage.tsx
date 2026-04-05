@@ -24,7 +24,6 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
   KeyOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import type { APIToken } from '../types/api_token';
 import {
