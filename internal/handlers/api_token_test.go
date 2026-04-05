@@ -476,8 +476,10 @@ func TestDeleteAPIToken_NonExistent(t *testing.T) {
 
 func TestGenerateRandomToken(t *testing.T) {
 	t.Run("generate random token format", func(t *testing.T) {
-		token1 := generateRandomToken()
-		token2 := generateRandomToken()
+		token1, err1 := generateRandomToken()
+		token2, err2 := generateRandomToken()
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
 
 		// Should start with psk_
 		assert.True(t, strings.HasPrefix(token1, "psk_"))
