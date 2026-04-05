@@ -17,10 +17,12 @@ import (
 )
 
 // generateRandomToken 生成随机Token
-func generateRandomToken() string {
+func generateRandomToken() (string, error) {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
-	return "psk_" + hex.EncodeToString(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return "psk_" + hex.EncodeToString(bytes), nil
 }
 
 // CreateAPIToken 创建新的API Token
@@ -49,7 +51,15 @@ func CreateAPIToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 生成随机Token
-	rawToken := generateRandomToken()
+	rawToken, err := generateRandomToken()
+	if err != nil {
+		logger.Error("failed to generate random token", map[string]interface{}{
+			"error": err.Error(),
+		})
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to generate token"})
+		return
+	}
 	tokenHash := db.HashToken(rawToken)
 
 	// 设置权限，默认为只读

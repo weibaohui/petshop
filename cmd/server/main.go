@@ -58,14 +58,15 @@ func runWithConfig(config *serverConfig) error {
 	return runWithDependencies(config, nil)
 }
 
-// runWithDependencies runs the server with injectable dependencies for testing
-// signalChan: optional channel to receive shutdown signals (for testing)
-// serverErrorHandler: optional function to handle server errors (for testing)
+// serverDependencies holds injectable dependencies for testing the server
 type serverDependencies struct {
 	signalChan     <-chan os.Signal
 	serverErrorHandler func(error)
 }
 
+// runWithDependencies runs the server with injectable dependencies for testing
+// config: server configuration
+// deps: optional dependencies for testing (signalChan and serverErrorHandler)
 func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	// Initialize logger
 	logger.Init(config.logDir)
@@ -258,7 +259,7 @@ func setupRoutes(mux *http.ServeMux) {
 // setupAdminRoutes registers admin API routes
 func setupAdminRoutes(mux *http.ServeMux) {
 	// ==================== 商品管理 ====================
-	mux.HandleFunc("/api/admin/products", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/products", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.ListProducts(w, r)
@@ -268,8 +269,8 @@ func setupAdminRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/product", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/product", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetProduct(w, r)
@@ -281,30 +282,30 @@ func setupAdminRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, PUT, DELETE")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// ==================== 库存管理 ====================
-	mux.HandleFunc("/api/admin/inventory/logs", handlers.ListInventoryLogs)
-	mux.HandleFunc("/api/admin/inventory/alerts", handlers.GetInventoryAlerts)
-	mux.HandleFunc("/api/admin/inventory/adjust", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/inventory/logs", middleware.AuthMiddleware(http.HandlerFunc(handlers.ListInventoryLogs)))
+	mux.Handle("/api/admin/inventory/alerts", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetInventoryAlerts)))
+	mux.Handle("/api/admin/inventory/adjust", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handlers.AdjustInventory(w, r)
 		} else {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// ==================== 订单管理 ====================
-	mux.HandleFunc("/api/admin/orders", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/orders", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handlers.ListOrders(w, r)
 		} else {
 			w.Header().Set("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/order", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/order", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetOrder(w, r)
@@ -314,26 +315,26 @@ func setupAdminRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, PUT")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/order/refund", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/order/refund", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handlers.ProcessRefund(w, r)
 		} else {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// ==================== 用户管理 ====================
-	mux.HandleFunc("/api/admin/users", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/users", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handlers.ListUsers(w, r)
 		} else {
 			w.Header().Set("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/user", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/user", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.GetUser(w, r)
@@ -343,19 +344,19 @@ func setupAdminRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, PUT")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/user/reset-password", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/user/reset-password", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handlers.ResetUserPassword(w, r)
 		} else {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// ==================== 销售统计 ====================
-	mux.HandleFunc("/api/admin/stats/sales", handlers.GetSalesStats)
-	mux.HandleFunc("/api/admin/stats/hot-products", handlers.GetHotProducts)
+	mux.Handle("/api/admin/stats/sales", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetSalesStats)))
+	mux.Handle("/api/admin/stats/hot-products", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetHotProducts)))
 }
 
 // setupCartRoutes registers cart API routes
@@ -482,7 +483,7 @@ func setupOpenAPIRoutes(mux *http.ServeMux) {
 // setupConfigRoutes registers system config routes
 func setupConfigRoutes(mux *http.ServeMux) {
 	// 轮播图管理
-	mux.HandleFunc("/api/admin/carousels", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/carousels", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.ListCarousels(w, r)
@@ -492,8 +493,8 @@ func setupConfigRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/carousel", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/carousel", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			handlers.UpdateCarousel(w, r)
@@ -503,10 +504,10 @@ func setupConfigRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "PUT, DELETE")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// 公告管理
-	mux.HandleFunc("/api/admin/announcements", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/announcements", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			handlers.ListAnnouncements(w, r)
@@ -516,8 +517,8 @@ func setupConfigRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "GET, POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/announcement", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/announcement", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
 			handlers.UpdateAnnouncement(w, r)
@@ -527,23 +528,25 @@ func setupConfigRoutes(mux *http.ServeMux) {
 			w.Header().Set("Allow", "PUT, DELETE")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 
 	// 系统参数配置
-	mux.HandleFunc("/api/admin/configs", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/admin/configs", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			handlers.GetSystemConfigs(w, r)
 		} else {
 			w.Header().Set("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
-	mux.HandleFunc("/api/admin/config", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/admin/config", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handlers.SetSystemConfig(w, r)
 		} else {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	})
+	})))
 }
+
+// setupAPITokenRoutes registers API token management routes

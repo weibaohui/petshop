@@ -68,8 +68,18 @@ func setupTestServer(t *testing.T) (http.Handler, func()) {
 
 // TestRouteRegistration tests that all routes are properly registered
 func TestRouteRegistration(t *testing.T) {
+	// Set JWT secret for testing (must be at least 32 bytes)
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
+
+	// Generate a valid JWT token for admin routes
+	validToken, err := middleware.GenerateToken(1)
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
 
 	// Reset pets state before each subtest to avoid test order dependency
 	tests := []struct {
@@ -78,47 +88,48 @@ func TestRouteRegistration(t *testing.T) {
 		path           string
 		expectedStatus int
 		body           string
+		authRequired   bool
 	}{
 		// Pet routes
-		{"ListPets GET", "GET", "/api/pets", http.StatusOK, ""},
-		{"GetPet GET", "GET", "/api/pet?id=1", http.StatusOK, ""},
-		{"GetPet Not Found", "GET", "/api/pet?id=999", http.StatusNotFound, ""},
-		{"UpdatePet PUT", "PUT", "/api/pet", http.StatusOK, `{"id":1,"name":"Buddy Updated","type":"Dog","status":"available"}`},
-		{"DeletePet DELETE", "DELETE", "/api/pet?id=3", http.StatusOK, ""},
-		{"SearchPets GET", "GET", "/api/pet/search?name=Buddy", http.StatusOK, ""},
-		{"CacheStats GET", "GET", "/api/pet/cache/stats", http.StatusOK, ""},
-		{"CacheHitRate GET", "GET", "/api/pet/cache/hitrate", http.StatusOK, ""},
-		{"PetByPath GET", "GET", "/api/pet/2", http.StatusOK, ""},
-		{"PetByPath PUT", "PUT", "/api/pet/2", http.StatusOK, `{"id":2,"name":"Whiskers Updated","type":"Cat","status":"available"}`},
+		{"ListPets GET", "GET", "/api/pets", http.StatusOK, "", false},
+		{"GetPet GET", "GET", "/api/pet?id=1", http.StatusOK, "", false},
+		{"GetPet Not Found", "GET", "/api/pet?id=999", http.StatusNotFound, "", false},
+		{"UpdatePet PUT", "PUT", "/api/pet", http.StatusOK, `{"id":1,"name":"Buddy Updated","type":"Dog","status":"available"}`, false},
+		{"DeletePet DELETE", "DELETE", "/api/pet?id=3", http.StatusOK, "", false},
+		{"SearchPets GET", "GET", "/api/pet/search?name=Buddy", http.StatusOK, "", false},
+		{"CacheStats GET", "GET", "/api/pet/cache/stats", http.StatusOK, "", false},
+		{"CacheHitRate GET", "GET", "/api/pet/cache/hitrate", http.StatusOK, "", false},
+		{"PetByPath GET", "GET", "/api/pet/2", http.StatusOK, "", false},
+		{"PetByPath PUT", "PUT", "/api/pet/2", http.StatusOK, `{"id":2,"name":"Whiskers Updated","type":"Cat","status":"available"}`, false},
 
 		// Admin product routes
-		{"ListProducts GET", "GET", "/api/admin/products", http.StatusOK, ""},
-		{"GetProduct GET", "GET", "/api/admin/product?id=1", http.StatusOK, ""},
-		{"UpdateProduct PUT", "PUT", "/api/admin/product", http.StatusOK, `{"id":1,"name":"Test Product","price":9.99,"stock":10}`},
+		{"ListProducts GET", "GET", "/api/admin/products", http.StatusOK, "", true},
+		{"GetProduct GET", "GET", "/api/admin/product?id=1", http.StatusOK, "", true},
+		{"UpdateProduct PUT", "PUT", "/api/admin/product", http.StatusOK, `{"id":1,"name":"Test Product","price":9.99,"stock":10}`, true},
 
 		// Admin inventory routes
-		{"ListInventoryLogs GET", "GET", "/api/admin/inventory/logs", http.StatusOK, ""},
-		{"GetInventoryAlerts GET", "GET", "/api/admin/inventory/alerts", http.StatusOK, ""},
+		{"ListInventoryLogs GET", "GET", "/api/admin/inventory/logs", http.StatusOK, "", true},
+		{"GetInventoryAlerts GET", "GET", "/api/admin/inventory/alerts", http.StatusOK, "", true},
 
 		// Admin order routes
-		{"ListOrders GET", "GET", "/api/admin/orders", http.StatusOK, ""},
-		{"GetOrder GET", "GET", "/api/admin/order?id=1", http.StatusOK, ""},
+		{"ListOrders GET", "GET", "/api/admin/orders", http.StatusOK, "", true},
+		{"GetOrder GET", "GET", "/api/admin/order?id=1", http.StatusOK, "", true},
 
 		// Admin user routes
-		{"ListUsers GET", "GET", "/api/admin/users", http.StatusOK, ""},
-		{"GetUser GET", "GET", "/api/admin/user?id=1", http.StatusOK, ""},
+		{"ListUsers GET", "GET", "/api/admin/users", http.StatusOK, "", true},
+		{"GetUser GET", "GET", "/api/admin/user?id=1", http.StatusOK, "", true},
 
 		// Admin stats routes
-		{"GetSalesStats GET", "GET", "/api/admin/stats/sales", http.StatusOK, ""},
-		{"GetHotProducts GET", "GET", "/api/admin/stats/hot-products", http.StatusOK, ""},
+		{"GetSalesStats GET", "GET", "/api/admin/stats/sales", http.StatusOK, "", true},
+		{"GetHotProducts GET", "GET", "/api/admin/stats/hot-products", http.StatusOK, "", true},
 
 		// Admin config routes
-		{"ListCarousels GET", "GET", "/api/admin/carousels", http.StatusOK, ""},
-		{"ListAnnouncements GET", "GET", "/api/admin/announcements", http.StatusOK, ""},
-		{"GetSystemConfigs GET", "GET", "/api/admin/configs", http.StatusOK, ""},
+		{"ListCarousels GET", "GET", "/api/admin/carousels", http.StatusOK, "", true},
+		{"ListAnnouncements GET", "GET", "/api/admin/announcements", http.StatusOK, "", true},
+		{"GetSystemConfigs GET", "GET", "/api/admin/configs", http.StatusOK, "", true},
 
 		// Error page
-		{"ErrorPage GET", "GET", "/error", http.StatusInternalServerError, ""},
+		{"ErrorPage GET", "GET", "/error", http.StatusInternalServerError, "", false},
 	}
 
 	for _, tt := range tests {
@@ -134,6 +145,10 @@ func TestRouteRegistration(t *testing.T) {
 			if tt.body != "" {
 				req.Header.Set("Content-Type", "application/json")
 			}
+			// Add auth header for protected routes
+			if tt.authRequired {
+				req.Header.Set("Authorization", "Bearer "+validToken)
+			}
 			rr := httptest.NewRecorder()
 
 			handler.ServeHTTP(rr, req)
@@ -147,34 +162,49 @@ func TestRouteRegistration(t *testing.T) {
 
 // TestMethodNotAllowed tests 405 Method Not Allowed responses
 func TestMethodNotAllowed(t *testing.T) {
+	// Set JWT secret for testing (must be at least 32 bytes)
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
+
+	// Generate a valid JWT token for admin routes
+	validToken, err := middleware.GenerateToken(1)
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
 
 	tests := []struct {
 		name          string
 		method        string
 		path          string
 		expectedAllow string
+		authRequired  bool
 	}{
-		{"Pet POST not allowed", "POST", "/api/pet", "GET, PUT, DELETE"},
-		{"Pet PATCH not allowed", "PATCH", "/api/pet", "GET, PUT, DELETE"},
-		{"Products DELETE not allowed", "DELETE", "/api/admin/products", "GET, POST"},
-		{"Product PATCH not allowed", "PATCH", "/api/admin/product", "GET, PUT, DELETE"},
-		{"Orders POST not allowed", "POST", "/api/admin/orders", "GET"},
-		{"Order DELETE not allowed", "DELETE", "/api/admin/order", "GET, PUT"},
-		{"Users POST not allowed", "POST", "/api/admin/users", "GET"},
-		{"User DELETE not allowed", "DELETE", "/api/admin/user", "GET, PUT"},
-		{"Carousels DELETE not allowed", "DELETE", "/api/admin/carousels", "GET, POST"},
-		{"Carousel GET not allowed", "GET", "/api/admin/carousel", "PUT, DELETE"},
-		{"Announcements DELETE not allowed", "DELETE", "/api/admin/announcements", "GET, POST"},
-		{"Announcement GET not allowed", "GET", "/api/admin/announcement", "PUT, DELETE"},
-		{"Configs POST not allowed", "POST", "/api/admin/configs", "GET"},
-		{"Config GET not allowed", "GET", "/api/admin/config", "POST"},
+		{"Pet POST not allowed", "POST", "/api/pet", "GET, PUT, DELETE", false},
+		{"Pet PATCH not allowed", "PATCH", "/api/pet", "GET, PUT, DELETE", false},
+		{"Products DELETE not allowed", "DELETE", "/api/admin/products", "GET, POST", true},
+		{"Product PATCH not allowed", "PATCH", "/api/admin/product", "GET, PUT, DELETE", true},
+		{"Orders POST not allowed", "POST", "/api/admin/orders", "GET", true},
+		{"Order DELETE not allowed", "DELETE", "/api/admin/order", "GET, PUT", true},
+		{"Users POST not allowed", "POST", "/api/admin/users", "GET", true},
+		{"User DELETE not allowed", "DELETE", "/api/admin/user", "GET, PUT", true},
+		{"Carousels DELETE not allowed", "DELETE", "/api/admin/carousels", "GET, POST", true},
+		{"Carousel GET not allowed", "GET", "/api/admin/carousel", "PUT, DELETE", true},
+		{"Announcements DELETE not allowed", "DELETE", "/api/admin/announcements", "GET, POST", true},
+		{"Announcement GET not allowed", "GET", "/api/admin/announcement", "PUT, DELETE", true},
+		{"Configs POST not allowed", "POST", "/api/admin/configs", "GET", true},
+		{"Config GET not allowed", "GET", "/api/admin/config", "POST", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			// Add auth header for protected routes
+			if tt.authRequired {
+				req.Header.Set("Authorization", "Bearer "+validToken)
+			}
 			rr := httptest.NewRecorder()
 
 			handler.ServeHTTP(rr, req)
@@ -712,8 +742,18 @@ func BenchmarkRouteHandling(b *testing.B) {
 
 // TestInventoryAdjustEndpoint tests inventory adjust endpoint
 func TestInventoryAdjustEndpoint(t *testing.T) {
+	// Set JWT secret for testing (must be at least 32 bytes)
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
+
+	// Generate a valid JWT token for admin routes
+	validToken, err := middleware.GenerateToken(1)
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
 
 	tests := []struct {
 		name           string
@@ -729,6 +769,7 @@ func TestInventoryAdjustEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/api/admin/inventory/adjust", nil)
+			req.Header.Set("Authorization", "Bearer "+validToken)
 			rr := httptest.NewRecorder()
 
 			handler.ServeHTTP(rr, req)
@@ -749,8 +790,18 @@ func TestInventoryAdjustEndpoint(t *testing.T) {
 
 // TestRefundEndpoint tests refund endpoint
 func TestRefundEndpoint(t *testing.T) {
+	// Set JWT secret for testing (must be at least 32 bytes)
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
+
+	// Generate a valid JWT token for admin routes
+	validToken, err := middleware.GenerateToken(1)
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
 
 	tests := []struct {
 		name           string
@@ -766,6 +817,7 @@ func TestRefundEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/api/admin/order/refund", nil)
+			req.Header.Set("Authorization", "Bearer "+validToken)
 			rr := httptest.NewRecorder()
 
 			handler.ServeHTTP(rr, req)
@@ -786,8 +838,18 @@ func TestRefundEndpoint(t *testing.T) {
 
 // TestResetPasswordEndpoint tests reset password endpoint
 func TestResetPasswordEndpoint(t *testing.T) {
+	// Set JWT secret for testing (must be at least 32 bytes)
+	os.Setenv("JWT_SECRET_KEY", "this-is-a-test-secret-key-that-is-32b")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
 	handler, cleanup := setupTestServer(t)
 	defer cleanup()
+
+	// Generate a valid JWT token for admin routes
+	validToken, err := middleware.GenerateToken(1)
+	if err != nil {
+		t.Fatalf("Failed to generate test token: %v", err)
+	}
 
 	tests := []struct {
 		name           string
@@ -803,6 +865,7 @@ func TestResetPasswordEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/api/admin/user/reset-password", nil)
+			req.Header.Set("Authorization", "Bearer "+validToken)
 			rr := httptest.NewRecorder()
 
 			handler.ServeHTTP(rr, req)

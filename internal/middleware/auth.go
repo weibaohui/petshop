@@ -15,6 +15,7 @@ import (
 // UserIDKey is the context key for user ID
 type contextKey string
 
+// UserIDKey is the context key used to store and retrieve the user ID from context
 const UserIDKey contextKey = "userID"
 
 // ErrMissingJWTSecret is returned when JWT_SECRET_KEY environment variable is not set
@@ -116,7 +117,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				return nil, jwt.ErrSignatureInvalid
 			}
 			return secretKey, nil
-		})
+		}, jwt.WithValidMethods([]string{"HS256"}))
 
 		if err != nil {
 			http.Error(w, "unauthorized: invalid token", http.StatusUnauthorized)
