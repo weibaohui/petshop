@@ -9,7 +9,7 @@ import (
 
 func resetDBState() {
 	Close()
-	db = nil
+	DB = nil
 	dbInited = false
 	dbErr = nil
 }
@@ -34,7 +34,7 @@ func TestInitDB_AlreadyInitialized(t *testing.T) {
 	// Second InitDB should return the cached result (nil error) without re-opening
 	err2 := InitDB(":memory:")
 	assert.NoError(t, err2)
-	assert.Equal(t, GetDB(), db)
+	assert.Equal(t, GetDB(), DB)
 }
 
 func TestInitDB_InvalidPath(t *testing.T) {

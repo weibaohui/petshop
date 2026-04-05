@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	db      *sql.DB
-	dbMu    sync.Mutex
+	// DB is the global database instance
+	DB       *sql.DB
+	dbMu     sync.Mutex
 	dbInited bool
-	dbErr   error
+	dbErr    error
 )
 
 // InitDB initializes the database connection
@@ -23,7 +24,7 @@ func InitDB(dbPath string) error {
 		return dbErr
 	}
 
-	db, dbErr = sql.Open("sqlite3", dbPath)
+	DB, dbErr = sql.Open("sqlite3", dbPath)
 	if dbErr != nil {
 		dbInited = true
 		return dbErr
@@ -31,8 +32,8 @@ func InitDB(dbPath string) error {
 
 	dbErr = createTables()
 	if dbErr != nil {
-		db.Close()
-		db = nil
+		DB.Close()
+		DB = nil
 		dbInited = true
 		return dbErr
 	}
@@ -43,7 +44,7 @@ func InitDB(dbPath string) error {
 
 // GetDB returns the database instance
 func GetDB() *sql.DB {
-	return db
+	return DB
 }
 
 func createTables() error {
@@ -60,8 +61,34 @@ func createTables() error {
 		UNIQUE(user_id, product_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_cart_user_id ON cart_items(user_id);
+
+	-- 用户表（用于OTP登录）
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password_hash TEXT NOT NULL,
+		email TEXT,
+		phone TEXT,
+		status TEXT DEFAULT 'active',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	-- OTP表
+	CREATE TABLE IF NOT EXISTS user_otp (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL UNIQUE,
+		otp_secret TEXT NOT NULL,
+		otp_enabled BOOLEAN DEFAULT 0,
+		otp_enabled_at TIMESTAMP,
+		backup_codes TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_user_otp_user_id ON user_otp(user_id);
 	`
-	_, err := db.Exec(schema)
+	_, err := DB.Exec(schema)
 	return err
 }
 
@@ -70,10 +97,10 @@ func Close() error {
 	dbMu.Lock()
 	defer dbMu.Unlock()
 
-	if db != nil {
-		err := db.Close()
+	if DB != nil {
+		err := DB.Close()
 		if err == nil {
-			db = nil
+			DB = nil
 			dbInited = false
 		}
 		return err
@@ -86,10 +113,10 @@ func Close() error {
 func ResetForTesting() {
 	dbMu.Lock()
 	defer dbMu.Unlock()
-	if db != nil {
-		db.Close()
+	if DB != nil {
+		DB.Close()
 	}
-	db = nil
+	DB = nil
 	dbInited = false
 	dbErr = nil
 }

@@ -246,6 +246,9 @@ func setupRoutes(mux *http.ServeMux) {
 
 	// Setup system config routes
 	setupConfigRoutes(mux)
+
+	// Setup OTP routes
+	setupOTPRoutes(mux)
 }
 
 // setupAdminRoutes registers admin API routes
@@ -447,6 +450,65 @@ func setupConfigRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/config", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handlers.SetSystemConfig(w, r)
+		} else {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+}
+
+// setupOTPRoutes registers OTP routes
+func setupOTPRoutes(mux *http.ServeMux) {
+	otpHandler := handlers.NewOTPHandler()
+
+	// OTP设置（需要认证）
+	mux.Handle("/api/otp/setup", middleware.AuthMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				otpHandler.SetupOTP(w, r)
+			} else {
+				w.Header().Set("Allow", "POST")
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})))
+
+	// OTP绑定（需要认证）
+	mux.Handle("/api/otp/bind", middleware.AuthMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				otpHandler.BindOTP(w, r)
+			} else {
+				w.Header().Set("Allow", "POST")
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})))
+
+	// OTP解绑（需要认证）
+	mux.Handle("/api/otp/unbind", middleware.AuthMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				otpHandler.UnbindOTP(w, r)
+			} else {
+				w.Header().Set("Allow", "POST")
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})))
+
+	// OTP状态查询（需要认证）
+	mux.Handle("/api/otp/status", middleware.AuthMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				otpHandler.GetOTPStatus(w, r)
+			} else {
+				w.Header().Set("Allow", "GET")
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})))
+
+	// OTP验证（用于登录验证，不需要认证）
+	mux.HandleFunc("/api/otp/verify", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			otpHandler.VerifyOTP(w, r)
 		} else {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
