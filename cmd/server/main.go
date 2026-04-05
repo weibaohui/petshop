@@ -144,43 +144,148 @@ func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	return nil
 }
 
+// methodNotAllowed writes a 405 Method Not Allowed response with the given allowed methods
+func methodNotAllowed(w http.ResponseWriter, allowedMethods string) {
+	w.Header().Set("Allow", allowedMethods)
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+// methodNotAllowedJSON writes a 405 response with JSON content type
+func methodNotAllowedJSON(w http.ResponseWriter, allowedMethods string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Allow", allowedMethods)
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+// requireMethod checks if the request method matches, otherwise sends 405 response
+// Returns true if method matches, false otherwise
+func requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method != method {
+		methodNotAllowed(w, method)
+		return false
+	}
+	return true
+}
+
+// requireMethodJSON checks if the request method matches with JSON content type
+func requireMethodJSON(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method != method {
+		methodNotAllowedJSON(w, method)
+		return false
+	}
+	return true
+}
+
+// routeHandler is a function that handles a specific route
+type routeHandler func(w http.ResponseWriter, r *http.Request)
+
+// registerRoute registers a simple GET route
+func registerRoute(mux *http.ServeMux, path string, handler routeHandler) {
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		if !requireMethod(w, r, http.MethodGet) {
+			return
+		}
+		handler(w, r)
+	})
+}
+
+// registerAuthRoute registers an authenticated route with single method
+func registerAuthRoute(mux *http.ServeMux, path string, method string, handler routeHandler) {
+	mux.Handle(path, middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != method {
+			methodNotAllowed(w, method)
+			return
+		}
+		handler(w, r)
+	})))
+}
+
+// registerAuthRoutes registers an authenticated route with multiple methods
+func registerAuthRoutes(mux *http.ServeMux, path string, methodHandlers map[string]routeHandler) {
+	mux.Handle(path, middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler, ok := methodHandlers[r.Method]
+		if !ok {
+			// Build allowed methods string with deterministic order
+			methods := make([]string, 0, len(methodHandlers))
+			for _, m := range []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch} {
+				if _, exists := methodHandlers[m]; exists {
+					methods = append(methods, m)
+				}
+			}
+			methodNotAllowed(w, strings.Join(methods, ", "))
+			return
+		}
+		handler(w, r)
+	})))
+}
+
+// handleV1PetPath handles /api/v1/pets/:id routes
+func handleV1PetPath(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/v1/pets/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 1 && parts[0] != "" {
+		query := r.URL.Query()
+		query.Set("id", parts[0])
+		r.URL.RawQuery = query.Encode()
+		handlers.GetPet(w, r)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
+// handlePetPath handles /api/pet/:id routes with GET/PUT/DELETE
+func handlePetPath(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	// parts should be like ["", "api", "pet", "1"] or ["", "api", "pet", "1", "photos"]
+	if len(parts) == 5 && parts[4] == "photos" {
+		handlers.PetPhotoHandler(w, r)
+		return
+	}
+	if len(parts) != 4 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	// Extract pet ID from path and set as query param for handlers
+	r.URL.RawQuery = "id=" + parts[3]
+	switch r.Method {
+	case http.MethodGet:
+		handlers.GetPet(w, r)
+	case http.MethodPut:
+		handlers.UpdatePet(w, r)
+	case http.MethodDelete:
+		handlers.DeletePet(w, r)
+	default:
+		methodNotAllowed(w, "GET, PUT, DELETE")
+	}
+}
+
+// handleOpenAPIPetPath handles /api/open/pets/:id routes
+func handleOpenAPIPetPath(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/open/pets/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 1 && parts[0] != "" {
+		query := r.URL.Query()
+		query.Set("id", parts[0])
+		r.URL.RawQuery = query.Encode()
+		handlers.GetPet(w, r)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
 // setupRoutes registers all API routes to the given mux
 func setupRoutes(mux *http.ServeMux) {
 	// Pet routes
 	mux.HandleFunc("/api/pets", handlers.ListPets)
-	mux.HandleFunc("/api/v1/pets", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		handlers.FilterPets(w, r)
-	})
-	mux.HandleFunc("/api/v1/categories", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		handlers.GetCategories(w, r)
-	})
+	registerRoute(mux, "/api/v1/pets", handlers.FilterPets)
+	registerRoute(mux, "/api/v1/categories", handlers.GetCategories)
 	// Handle /api/v1/pets/:id
 	mux.HandleFunc("/api/v1/pets/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		if !requireMethod(w, r, http.MethodGet) {
 			return
 		}
-		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pets/")
-		parts := strings.Split(path, "/")
-		if len(parts) == 1 && parts[0] != "" {
-			query := r.URL.Query()
-			query.Set("id", parts[0])
-			r.URL.RawQuery = query.Encode()
-			handlers.GetPet(w, r)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
+		handleV1PetPath(w, r)
 	})
 	mux.HandleFunc("/api/pet", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -191,40 +296,13 @@ func setupRoutes(mux *http.ServeMux) {
 		case http.MethodDelete:
 			handlers.DeletePet(w, r)
 		default:
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Allow", "GET, PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			methodNotAllowedJSON(w, "GET, PUT, DELETE")
 		}
 	})
 	mux.HandleFunc("/api/pet/search", handlers.SearchPets)
 	mux.HandleFunc("/api/pet/cache/stats", handlers.GetCacheStats)
 	mux.HandleFunc("/api/pet/cache/hitrate", handlers.GetCacheHitRate)
-	mux.HandleFunc("/api/pet/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
-		// parts should be like ["", "api", "pet", "1"] or ["", "api", "pet", "1", "photos"]
-		if len(parts) == 5 && parts[4] == "photos" {
-			handlers.PetPhotoHandler(w, r)
-			return
-		}
-		if len(parts) != 4 {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		// Extract pet ID from path and set as query param for handlers
-		r.URL.RawQuery = "id=" + parts[3]
-		switch r.Method {
-		case http.MethodGet:
-			handlers.GetPet(w, r)
-		case http.MethodPut:
-			handlers.UpdatePet(w, r)
-		case http.MethodDelete:
-			handlers.DeletePet(w, r)
-		default:
-			w.Header().Set("Allow", "GET, PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})
+	mux.HandleFunc("/api/pet/", handlePetPath)
 
 	// Error page handler for non-API routes
 	mux.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
@@ -259,100 +337,36 @@ func setupRoutes(mux *http.ServeMux) {
 // setupAdminRoutes registers admin API routes
 func setupAdminRoutes(mux *http.ServeMux) {
 	// ==================== 商品管理 ====================
-	mux.Handle("/api/admin/products", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.ListProducts(w, r)
-		case http.MethodPost:
-			handlers.CreateProduct(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/product", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.GetProduct(w, r)
-		case http.MethodPut:
-			handlers.UpdateProduct(w, r)
-		case http.MethodDelete:
-			handlers.DeleteProduct(w, r)
-		default:
-			w.Header().Set("Allow", "GET, PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoutes(mux, "/api/admin/products", map[string]routeHandler{
+		http.MethodGet:  handlers.ListProducts,
+		http.MethodPost: handlers.CreateProduct,
+	})
+	registerAuthRoutes(mux, "/api/admin/product", map[string]routeHandler{
+		http.MethodGet:    handlers.GetProduct,
+		http.MethodPut:    handlers.UpdateProduct,
+		http.MethodDelete: handlers.DeleteProduct,
+	})
 
 	// ==================== 库存管理 ====================
 	mux.Handle("/api/admin/inventory/logs", middleware.AuthMiddleware(http.HandlerFunc(handlers.ListInventoryLogs)))
 	mux.Handle("/api/admin/inventory/alerts", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetInventoryAlerts)))
-	mux.Handle("/api/admin/inventory/adjust", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handlers.AdjustInventory(w, r)
-		} else {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoute(mux, "/api/admin/inventory/adjust", http.MethodPost, handlers.AdjustInventory)
 
 	// ==================== 订单管理 ====================
-	mux.Handle("/api/admin/orders", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.ListOrders(w, r)
-		} else {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/order", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.GetOrder(w, r)
-		case http.MethodPut:
-			handlers.UpdateOrderStatus(w, r)
-		default:
-			w.Header().Set("Allow", "GET, PUT")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/order/refund", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handlers.ProcessRefund(w, r)
-		} else {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoute(mux, "/api/admin/orders", http.MethodGet, handlers.ListOrders)
+	registerAuthRoutes(mux, "/api/admin/order", map[string]routeHandler{
+		http.MethodGet: handlers.GetOrder,
+		http.MethodPut: handlers.UpdateOrderStatus,
+	})
+	registerAuthRoute(mux, "/api/admin/order/refund", http.MethodPost, handlers.ProcessRefund)
 
 	// ==================== 用户管理 ====================
-	mux.Handle("/api/admin/users", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.ListUsers(w, r)
-		} else {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/user", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.GetUser(w, r)
-		case http.MethodPut:
-			handlers.UpdateUserStatus(w, r)
-		default:
-			w.Header().Set("Allow", "GET, PUT")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/user/reset-password", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handlers.ResetUserPassword(w, r)
-		} else {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoute(mux, "/api/admin/users", http.MethodGet, handlers.ListUsers)
+	registerAuthRoutes(mux, "/api/admin/user", map[string]routeHandler{
+		http.MethodGet: handlers.GetUser,
+		http.MethodPut: handlers.UpdateUserStatus,
+	})
+	registerAuthRoute(mux, "/api/admin/user/reset-password", http.MethodPost, handlers.ResetUserPassword)
 
 	// ==================== 销售统计 ====================
 	mux.Handle("/api/admin/stats/sales", middleware.AuthMiddleware(http.HandlerFunc(handlers.GetSalesStats)))
@@ -373,9 +387,7 @@ func setupCartRoutes(mux *http.ServeMux) {
 		case http.MethodDelete:
 			handlers.DeleteCartItem(w, r)
 		default:
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Allow", "GET, POST, PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			methodNotAllowedJSON(w, "GET, POST, PUT, DELETE")
 		}
 	}))
 	mux.Handle("/api/cart", cartHandler)
@@ -386,9 +398,7 @@ func setupCartRoutes(mux *http.ServeMux) {
 		if r.Method == http.MethodDelete {
 			cartHandler.ServeHTTP(w, r)
 		} else {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Allow", "DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			methodNotAllowedJSON(w, "DELETE")
 		}
 	})
 }
@@ -396,29 +406,14 @@ func setupCartRoutes(mux *http.ServeMux) {
 // setupAPITokenRoutes registers API token management routes (admin only)
 func setupAPITokenRoutes(mux *http.ServeMux) {
 	// Token management - requires JWT auth (admin)
-	mux.Handle("/api/admin/tokens", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.ListAPITokens(w, r)
-		case http.MethodPost:
-			handlers.CreateAPIToken(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-
-	mux.Handle("/api/admin/token", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPut:
-			handlers.UpdateAPITokenStatus(w, r)
-		case http.MethodDelete:
-			handlers.DeleteAPIToken(w, r)
-		default:
-			w.Header().Set("Allow", "PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoutes(mux, "/api/admin/tokens", map[string]routeHandler{
+		http.MethodGet:  handlers.ListAPITokens,
+		http.MethodPost: handlers.CreateAPIToken,
+	})
+	registerAuthRoutes(mux, "/api/admin/token", map[string]routeHandler{
+		http.MethodPut:    handlers.UpdateAPITokenStatus,
+		http.MethodDelete: handlers.DeleteAPIToken,
+	})
 }
 
 // setupOpenAPIRoutes registers public API routes with API token authentication
@@ -428,8 +423,8 @@ func setupOpenAPIRoutes(mux *http.ServeMux) {
 		w.Header().Set("Content-Type", "application/json")
 		// Return basic info about the API
 		response := map[string]interface{}{
-			"message":    "Welcome to PetShop Open API",
-			"version":    "v1",
+			"message": "Welcome to PetShop Open API",
+			"version": "v1",
 			"endpoints": []string{
 				"GET /api/open/pets - List all pets",
 				"GET /api/open/pets/{id} - Get pet by ID",
@@ -442,111 +437,53 @@ func setupOpenAPIRoutes(mux *http.ServeMux) {
 
 	// List pets - open API
 	mux.Handle("/api/open/pets", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.ListPets(w, r)
-		} else {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		if !requireMethod(w, r, http.MethodGet) {
+			return
 		}
+		handlers.ListPets(w, r)
 	})))
 
 	// Get pet by ID - open API
 	mux.Handle("/api/open/pets/", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		if !requireMethod(w, r, http.MethodGet) {
 			return
 		}
-		path := strings.TrimPrefix(r.URL.Path, "/api/open/pets/")
-		parts := strings.Split(path, "/")
-		if len(parts) == 1 && parts[0] != "" {
-			query := r.URL.Query()
-			query.Set("id", parts[0])
-			r.URL.RawQuery = query.Encode()
-			handlers.GetPet(w, r)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
+		handleOpenAPIPetPath(w, r)
 	})))
 
 	// Get categories - open API
 	mux.Handle("/api/open/categories", middleware.APITokenAuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.GetCategories(w, r)
-		} else {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		if !requireMethod(w, r, http.MethodGet) {
+			return
 		}
+		handlers.GetCategories(w, r)
 	})))
 }
 
 // setupConfigRoutes registers system config routes
 func setupConfigRoutes(mux *http.ServeMux) {
 	// 轮播图管理
-	mux.Handle("/api/admin/carousels", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.ListCarousels(w, r)
-		case http.MethodPost:
-			handlers.CreateCarousel(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/carousel", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPut:
-			handlers.UpdateCarousel(w, r)
-		case http.MethodDelete:
-			handlers.DeleteCarousel(w, r)
-		default:
-			w.Header().Set("Allow", "PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoutes(mux, "/api/admin/carousels", map[string]routeHandler{
+		http.MethodGet:  handlers.ListCarousels,
+		http.MethodPost: handlers.CreateCarousel,
+	})
+	registerAuthRoutes(mux, "/api/admin/carousel", map[string]routeHandler{
+		http.MethodPut:    handlers.UpdateCarousel,
+		http.MethodDelete: handlers.DeleteCarousel,
+	})
 
 	// 公告管理
-	mux.Handle("/api/admin/announcements", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			handlers.ListAnnouncements(w, r)
-		case http.MethodPost:
-			handlers.CreateAnnouncement(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/announcement", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPut:
-			handlers.UpdateAnnouncement(w, r)
-		case http.MethodDelete:
-			handlers.DeleteAnnouncement(w, r)
-		default:
-			w.Header().Set("Allow", "PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoutes(mux, "/api/admin/announcements", map[string]routeHandler{
+		http.MethodGet:  handlers.ListAnnouncements,
+		http.MethodPost: handlers.CreateAnnouncement,
+	})
+	registerAuthRoutes(mux, "/api/admin/announcement", map[string]routeHandler{
+		http.MethodPut:    handlers.UpdateAnnouncement,
+		http.MethodDelete: handlers.DeleteAnnouncement,
+	})
 
 	// 系统参数配置
-	mux.Handle("/api/admin/configs", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			handlers.GetSystemConfigs(w, r)
-		} else {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
-	mux.Handle("/api/admin/config", middleware.AuthMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			handlers.SetSystemConfig(w, r)
-		} else {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})))
+	registerAuthRoute(mux, "/api/admin/configs", http.MethodGet, handlers.GetSystemConfigs)
+	registerAuthRoute(mux, "/api/admin/config", http.MethodPost, handlers.SetSystemConfig)
 }
 
-// setupAPITokenRoutes registers API token management routes
