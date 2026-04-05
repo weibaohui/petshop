@@ -4,95 +4,106 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"log"
 	"time"
 
 	"petshop/internal/models"
 )
 
-// APITokenRepository API令牌数据访问
-type APITokenRepository struct{}
-
-// NewAPITokenRepository 创建仓库实例
-func NewAPITokenRepository() *APITokenRepository {
-	return &APITokenRepository{}
+// APITokenRepository API Token数据访问层
+type APITokenRepository struct {
+	db *sql.DB
 }
 
-// hashToken 计算token的哈希值
-func hashToken(token string) string {
+// NewAPITokenRepository 创建Token仓库实例
+func NewAPITokenRepository() *APITokenRepository {
+	return &APITokenRepository{db: db}
+}
+
+// InitAPITokenTable 初始化Token表
+func InitAPITokenTable() error {
+	schema := `
+	CREATE TABLE IF NOT EXISTS api_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		token_hash TEXT NOT NULL UNIQUE,
+		status TEXT NOT NULL DEFAULT 'active',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		last_used_at DATETIME,
+		expires_at DATETIME,
+		created_by INTEGER NOT NULL,
+		permissions TEXT DEFAULT 'read'
+	);
+	CREATE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens(token_hash);
+	CREATE INDEX IF NOT EXISTS idx_api_tokens_status ON api_tokens(status);
+	`
+	_, err := db.Exec(schema)
+	return err
+}
+
+// HashToken 计算Token的哈希值
+func HashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
 }
 
-// Create 创建API令牌
+// Create 创建新的API Token
 func (r *APITokenRepository) Create(token *models.APIToken) error {
-	tokenHash := hashToken(token.Token)
-	result, err := db.Exec(
-		`INSERT INTO api_tokens (name, token_hash, description, status, expires_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		token.Name, tokenHash, token.Description, token.Status, token.ExpiresAt, token.CreatedAt, token.UpdatedAt,
-	)
+	query := `
+		INSERT INTO api_tokens (name, token_hash, status, created_by, permissions, expires_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`
+	result, err := r.db.Exec(query, token.Name, token.TokenHash, token.Status,
+		token.CreatedBy, token.Permissions, token.ExpiresAt)
 	if err != nil {
 		return err
 	}
 	token.ID, _ = result.LastInsertId()
-	token.TokenHash = tokenHash
 	return nil
 }
 
-// GetByTokenHash 根据token哈希获取令牌
+// GetByTokenHash 根据Token哈希值获取Token信息
 func (r *APITokenRepository) GetByTokenHash(tokenHash string) (*models.APIToken, error) {
-	var token models.APIToken
-	err := db.QueryRow(
-		`SELECT id, name, token_hash, description, status, last_used_at, expires_at, created_at, updated_at
-		 FROM api_tokens WHERE token_hash = ?`,
-		tokenHash,
-	).Scan(&token.ID, &token.Name, &token.TokenHash, &token.Description, &token.Status,
-		&token.LastUsedAt, &token.ExpiresAt, &token.CreatedAt, &token.UpdatedAt)
+	query := `
+		SELECT id, name, token_hash, status, created_at, updated_at, last_used_at, expires_at, created_by, permissions
+		FROM api_tokens WHERE token_hash = ?
+	`
+	row := r.db.QueryRow(query, tokenHash)
 
+	token := &models.APIToken{}
+	var expiresAt, lastUsedAt sql.NullTime
+	err := row.Scan(&token.ID, &token.Name, &token.TokenHash, &token.Status,
+		&token.CreatedAt, &token.UpdatedAt, &lastUsedAt, &expiresAt, &token.CreatedBy, &token.Permissions)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &token, nil
+	if expiresAt.Valid {
+		token.ExpiresAt = &expiresAt.Time
+	}
+	if lastUsedAt.Valid {
+		token.LastUsedAt = &lastUsedAt.Time
+	}
+	return token, nil
 }
 
-// GetByID 根据ID获取令牌
-func (r *APITokenRepository) GetByID(id int64) (*models.APIToken, error) {
-	var token models.APIToken
-	err := db.QueryRow(
-		`SELECT id, name, token_hash, description, status, last_used_at, expires_at, created_at, updated_at
-		 FROM api_tokens WHERE id = ?`,
-		id,
-	).Scan(&token.ID, &token.Name, &token.TokenHash, &token.Description, &token.Status,
-		&token.LastUsedAt, &token.ExpiresAt, &token.CreatedAt, &token.UpdatedAt)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &token, nil
-}
-
-// List 获取令牌列表
-func (r *APITokenRepository) List(limit, offset int) ([]models.APIToken, int64, error) {
+// List 获取Token列表
+func (r *APITokenRepository) List(offset, limit int) ([]models.APIToken, int, error) {
 	// 获取总数
-	var total int64
-	err := db.QueryRow(`SELECT COUNT(*) FROM api_tokens`).Scan(&total)
+	var total int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM api_tokens").Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// 获取列表
-	rows, err := db.Query(
-		`SELECT id, name, token_hash, description, status, last_used_at, expires_at, created_at, updated_at
-		 FROM api_tokens ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-		limit, offset,
-	)
+	// 获取列表（不返回token_hash）
+	query := `
+		SELECT id, name, status, created_at, updated_at, last_used_at, expires_at, created_by, permissions
+		FROM api_tokens ORDER BY created_at DESC LIMIT ? OFFSET ?
+	`
+	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -100,70 +111,61 @@ func (r *APITokenRepository) List(limit, offset int) ([]models.APIToken, int64, 
 
 	tokens := make([]models.APIToken, 0)
 	for rows.Next() {
-		var token models.APIToken
-		err := rows.Scan(&token.ID, &token.Name, &token.TokenHash, &token.Description, &token.Status,
-			&token.LastUsedAt, &token.ExpiresAt, &token.CreatedAt, &token.UpdatedAt)
+		token := models.APIToken{}
+		var expiresAt, lastUsedAt sql.NullTime
+		err := rows.Scan(&token.ID, &token.Name, &token.Status,
+			&token.CreatedAt, &token.UpdatedAt, &lastUsedAt, &expiresAt, &token.CreatedBy, &token.Permissions)
 		if err != nil {
-			return nil, 0, err
+			continue
+		}
+		if expiresAt.Valid {
+			token.ExpiresAt = &expiresAt.Time
+		}
+		if lastUsedAt.Valid {
+			token.LastUsedAt = &lastUsedAt.Time
 		}
 		tokens = append(tokens, token)
 	}
-
 	return tokens, total, nil
 }
 
-// UpdateStatus 更新令牌状态
+// UpdateStatus 更新Token状态
 func (r *APITokenRepository) UpdateStatus(id int64, status string) error {
-	_, err := db.Exec(
-		`UPDATE api_tokens SET status = ?, updated_at = ? WHERE id = ?`,
-		status, time.Now(), id,
-	)
+	query := "UPDATE api_tokens SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+	_, err := r.db.Exec(query, status, id)
 	return err
 }
 
-// Delete 删除令牌
+// Delete 删除Token
 func (r *APITokenRepository) Delete(id int64) error {
-	_, err := db.Exec(`DELETE FROM api_tokens WHERE id = ?`, id)
+	query := "DELETE FROM api_tokens WHERE id = ?"
+	_, err := r.db.Exec(query, id)
 	return err
 }
 
 // UpdateLastUsedAt 更新最后使用时间
 func (r *APITokenRepository) UpdateLastUsedAt(id int64) error {
-	now := time.Now()
-	_, err := db.Exec(
-		`UPDATE api_tokens SET last_used_at = ? WHERE id = ?`,
-		now, id,
-	)
+	query := "UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?"
+	_, err := r.db.Exec(query, id)
 	return err
 }
 
-// ValidateToken 验证token是否有效
-func (r *APITokenRepository) ValidateToken(token string) (*models.APIToken, error) {
-	tokenHash := hashToken(token)
-	t, err := r.GetByTokenHash(tokenHash)
-	if err != nil {
-		return nil, err
-	}
-	if t == nil {
-		return nil, nil
+// IsTokenValid 检查Token是否有效
+func (r *APITokenRepository) IsTokenValid(tokenHash string) (bool, *models.APIToken) {
+	token, err := r.GetByTokenHash(tokenHash)
+	if err != nil || token == nil {
+		return false, nil
 	}
 
 	// 检查状态
-	if t.Status != "active" {
-		return nil, nil
+	if token.Status != "active" {
+		return false, nil
 	}
 
 	// 检查是否过期
-	if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
-		return nil, nil
+	if token.ExpiresAt != nil && time.Now().After(*token.ExpiresAt) {
+		return false, nil
 	}
 
-	// 更新最后使用时间（异步）
-	go func(tokenID int64) {
-		if err := r.UpdateLastUsedAt(tokenID); err != nil {
-			log.Printf("failed to update last_used_at for token %d: %v", tokenID, err)
-		}
-	}(t.ID)
-
-	return t, nil
+	return true, token
 }

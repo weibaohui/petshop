@@ -1,34 +1,27 @@
 export interface APIToken {
   id: number;
   name: string;
-  description: string;
+  token?: string; // 仅在创建时返回
   status: 'active' | 'disabled';
-  lastUsedAt: string | null;
-  expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface APITokenCreateRequest {
-  name: string;
-  description?: string;
-  expiresDays?: number;
-}
-
-export interface APITokenCreateResponse extends APIToken {
-  token: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+  createdBy: number;
+  permissions: string;
 }
 
 export interface APITokenListResponse {
-  data: APIToken[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+  list: APIToken[];
+  total: number;
 }
 
-export interface UpdateTokenStatusRequest {
+export interface CreateAPITokenRequest {
+  name: string;
+  expiresDays?: number;
+  permissions?: string;
+}
+
+export interface UpdateAPITokenStatusRequest {
   status: 'active' | 'disabled';
 }

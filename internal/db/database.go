@@ -76,7 +76,12 @@ func createTables() error {
 	CREATE INDEX IF NOT EXISTS idx_api_token_status ON api_tokens(status);
 	`
 	_, err := db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Initialize API Token table
+	return InitAPITokenTable()
 }
 
 // Close closes the database connection

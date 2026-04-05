@@ -10,155 +10,157 @@ import (
 
 	"petshop/internal/db"
 	"petshop/internal/logger"
+	"petshop/internal/middleware"
 	"petshop/internal/models"
 	"petshop/internal/pagination"
+	"petshop/internal/validator"
 )
 
-// apiTokenRepo is the repository for API tokens
-var apiTokenRepo = db.NewAPITokenRepository()
-
-// generateToken generates a secure random token
-func generateToken() string {
+// generateRandomToken 生成随机Token
+func generateRandomToken() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
-	return "ps_" + hex.EncodeToString(bytes)
+	return "psk_" + hex.EncodeToString(bytes)
 }
 
-// CreateAPIToken creates a new API token
+// CreateAPIToken 创建新的API Token
 func CreateAPIToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 获取当前用户ID
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	var req models.APITokenCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		logger.Error("failed to decode create token request", map[string]interface{}{
-			"error": err.Error(),
-		})
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
 
-	// Manual validation
-	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
-		return
-	}
-	if len(req.Name) > 100 {
-		writeError(w, http.StatusBadRequest, "name must be less than 100 characters")
-		return
-	}
-	if len(req.Description) > 500 {
-		writeError(w, http.StatusBadRequest, "description must be less than 500 characters")
+	if err := validator.Validate(req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	// Generate token
-	tokenValue := generateToken()
+	// 生成随机Token
+	rawToken := generateRandomToken()
+	tokenHash := db.HashToken(rawToken)
+
+	// 设置权限，默认为只读
+	permissions := req.Permissions
+	if permissions == "" {
+		permissions = "read"
+	}
 
 	token := &models.APIToken{
 		Name:        req.Name,
-		Token:       tokenValue,
-		Description: req.Description,
+		Token:       rawToken, // 仅在此处返回给客户端
+		TokenHash:   tokenHash,
 		Status:      "active",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedBy:   userID,
+		Permissions: permissions,
 	}
 
-	// Set expiration if specified
+	// 设置过期时间
 	if req.ExpiresDays > 0 {
 		expiresAt := time.Now().AddDate(0, 0, req.ExpiresDays)
 		token.ExpiresAt = &expiresAt
 	}
 
-	if err := apiTokenRepo.Create(token); err != nil {
+	repo := db.NewAPITokenRepository()
+	if err := repo.Create(token); err != nil {
 		logger.Error("failed to create api token", map[string]interface{}{
 			"error": err.Error(),
 		})
-		writeError(w, http.StatusInternalServerError, "failed to create token")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to create token"})
 		return
 	}
 
 	logger.Info("api token created", map[string]interface{}{
-		"token_id": token.ID,
-		"name":     token.Name,
+		"token_id":   token.ID,
+		"created_by": userID,
 	})
 
-	writeJSON(w, http.StatusCreated, token.ToCreateResponse())
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(token)
 }
 
-// ListAPITokens lists all API tokens
+// ListAPITokens 获取API Token列表
 func ListAPITokens(w http.ResponseWriter, r *http.Request) {
-	pageInfo := pagination.ParsePagination(r)
-	offset := (pageInfo.Page - 1) * pageInfo.PageSize
+	w.Header().Set("Content-Type", "application/json")
 
-	tokens, total, err := apiTokenRepo.List(pageInfo.PageSize, offset)
+	// 获取分页参数
+	page, limit := pagination.GetPageAndLimit(r)
+	offset := (page - 1) * limit
+
+	repo := db.NewAPITokenRepository()
+	tokens, total, err := repo.List(offset, limit)
 	if err != nil {
 		logger.Error("failed to list api tokens", map[string]interface{}{
 			"error": err.Error(),
 		})
-		writeError(w, http.StatusInternalServerError, "failed to list tokens")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to list tokens"})
 		return
 	}
 
-	// Convert to response format
-	responses := make([]models.APITokenResponse, len(tokens))
-	for i, t := range tokens {
-		responses[i] = t.ToResponse()
+	response := models.APITokenListResponse{
+		List:  tokens,
+		Total: total,
 	}
 
-	// Update pagination info with total
-	pageInfo.Total = int(total)
-	pageInfo.TotalPages = (int(total) + pageInfo.PageSize - 1) / pageInfo.PageSize
-
-	writeJSON(w, http.StatusOK, pagination.NewPagedResponse(responses, pageInfo))
+	// 添加分页头
+	pagination.SetPaginationHeaders(w, page, limit, total)
+	json.NewEncoder(w).Encode(response)
 }
 
-// UpdateAPITokenStatus updates the status of an API token
+// UpdateAPITokenStatus 更新API Token状态
 func UpdateAPITokenStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 获取Token ID
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		writeError(w, http.StatusBadRequest, "missing id parameter")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "missing token id"})
 		return
 	}
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id parameter")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid token id"})
 		return
 	}
 
-	var req struct {
-		Status string `json:"status"`
-	}
+	var req models.APITokenStatusUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
 
-	// Manual validation
-	if req.Status != "active" && req.Status != "disabled" {
-		writeError(w, http.StatusBadRequest, "status must be either 'active' or 'disabled'")
+	if err := validator.Validate(req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	// Check if token exists
-	token, err := apiTokenRepo.GetByID(id)
-	if err != nil {
-		logger.Error("failed to get api token", map[string]interface{}{
-			"error": err.Error(),
-			"id":    id,
-		})
-		writeError(w, http.StatusInternalServerError, "failed to get token")
-		return
-	}
-	if token == nil {
-		writeError(w, http.StatusNotFound, "token not found")
-		return
-	}
-
-	if err := apiTokenRepo.UpdateStatus(id, req.Status); err != nil {
+	repo := db.NewAPITokenRepository()
+	if err := repo.UpdateStatus(id, req.Status); err != nil {
 		logger.Error("failed to update api token status", map[string]interface{}{
-			"error": err.Error(),
-			"id":    id,
+			"error":    err.Error(),
+			"token_id": id,
 		})
-		writeError(w, http.StatusInternalServerError, "failed to update token status")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to update token status"})
 		return
 	}
 
@@ -167,48 +169,36 @@ func UpdateAPITokenStatus(w http.ResponseWriter, r *http.Request) {
 		"status":   req.Status,
 	})
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"message": "token status updated",
-		"id":      id,
-		"status":  req.Status,
-	})
+	json.NewEncoder(w).Encode(map[string]string{"message": "token status updated successfully"})
 }
 
-// DeleteAPIToken deletes an API token
+// DeleteAPIToken 删除API Token
 func DeleteAPIToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 获取Token ID
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
-		writeError(w, http.StatusBadRequest, "missing id parameter")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "missing token id"})
 		return
 	}
 
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid id parameter")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid token id"})
 		return
 	}
 
-	// Check if token exists
-	token, err := apiTokenRepo.GetByID(id)
-	if err != nil {
-		logger.Error("failed to get api token", map[string]interface{}{
-			"error": err.Error(),
-			"id":    id,
-		})
-		writeError(w, http.StatusInternalServerError, "failed to get token")
-		return
-	}
-	if token == nil {
-		writeError(w, http.StatusNotFound, "token not found")
-		return
-	}
-
-	if err := apiTokenRepo.Delete(id); err != nil {
+	repo := db.NewAPITokenRepository()
+	if err := repo.Delete(id); err != nil {
 		logger.Error("failed to delete api token", map[string]interface{}{
-			"error": err.Error(),
-			"id":    id,
+			"error":    err.Error(),
+			"token_id": id,
 		})
-		writeError(w, http.StatusInternalServerError, "failed to delete token")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to delete token"})
 		return
 	}
 
@@ -216,8 +206,5 @@ func DeleteAPIToken(w http.ResponseWriter, r *http.Request) {
 		"token_id": id,
 	})
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"message": "token deleted",
-		"id":      id,
-	})
+	json.NewEncoder(w).Encode(map[string]string{"message": "token deleted successfully"})
 }

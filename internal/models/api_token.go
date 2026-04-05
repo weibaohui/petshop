@@ -2,63 +2,35 @@ package models
 
 import "time"
 
-// APIToken API访问令牌
+// APIToken 开放API调用令牌
 type APIToken struct {
 	ID          int64     `json:"id"`
-	Name        string    `json:"name"`        // 令牌名称
-	Token       string    `json:"token"`       // 令牌值（仅创建时返回完整token）
-	TokenHash   string    `json:"-"`           // 令牌哈希（存储）
-	Description string    `json:"description"` // 描述
+	Name        string    `json:"name"`        // Token名称/描述
+	Token       string    `json:"token"`       // Token值（仅创建时返回）
+	TokenHash   string    `json:"-"`           // Token哈希值（存储）
 	Status      string    `json:"status"`      // active, disabled
-	LastUsedAt  *time.Time `json:"lastUsedAt"` // 最后使用时间
-	ExpiresAt   *time.Time `json:"expiresAt"`  // 过期时间
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
+	LastUsedAt  *time.Time `json:"lastUsedAt,omitempty"`
+	ExpiresAt   *time.Time `json:"expiresAt,omitempty"` // 过期时间，null表示永不过期
+	CreatedBy   int64     `json:"createdBy"`   // 创建者用户ID
+	Permissions string    `json:"permissions"` // 权限列表，逗号分隔，如 "read,write"
 }
 
-// APITokenCreateRequest 创建令牌请求
+// APITokenCreateRequest 创建Token请求
 type APITokenCreateRequest struct {
-	Name        string `json:"name" validate:"required,max=100"`
-	Description string `json:"description" validate:"max=500"`
-	ExpiresDays int    `json:"expiresDays"` // 过期天数，0表示永不过期
+	Name        string `json:"name" validate:"required,min=1,max=100"`
+	ExpiresDays int    `json:"expiresDays"` // 0表示永不过期
+	Permissions string `json:"permissions"` // 逗号分隔的权限列表
 }
 
-// APITokenResponse 令牌响应（隐藏敏感信息）
-type APITokenResponse struct {
-	ID          int64      `json:"id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Status      string     `json:"status"`
-	LastUsedAt  *time.Time `json:"lastUsedAt"`
-	ExpiresAt   *time.Time `json:"expiresAt"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+// APITokenListResponse Token列表响应
+type APITokenListResponse struct {
+	List  []APIToken `json:"list"`
+	Total int        `json:"total"`
 }
 
-// APITokenCreateResponse 创建令牌响应（包含完整token）
-type APITokenCreateResponse struct {
-	APITokenResponse
-	Token string `json:"token"` // 完整令牌，仅创建时返回
-}
-
-// ToResponse 转换为响应格式
-func (t *APIToken) ToResponse() APITokenResponse {
-	return APITokenResponse{
-		ID:          t.ID,
-		Name:        t.Name,
-		Description: t.Description,
-		Status:      t.Status,
-		LastUsedAt:  t.LastUsedAt,
-		ExpiresAt:   t.ExpiresAt,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
-	}
-}
-
-// ToCreateResponse 转换为创建响应格式
-func (t *APIToken) ToCreateResponse() APITokenCreateResponse {
-	return APITokenCreateResponse{
-		APITokenResponse: t.ToResponse(),
-		Token:            t.Token,
-	}
+// APITokenStatusUpdateRequest 更新Token状态请求
+type APITokenStatusUpdateRequest struct {
+	Status string `json:"status" validate:"required,oneof=active disabled"`
 }
