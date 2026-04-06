@@ -27,6 +27,16 @@ type DeleteCartItemRequest struct {
 }
 
 // GetCart handles GET /api/cart and returns the user's cart
+// @Summary Get user cart
+// @Description Get the current user's shopping cart
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.CartResponse
+// @Failure 401 {string} string "unauthorized"
+// @Failure 500 {string} string "failed to get cart"
+// @Router /api/cart [get]
 func GetCart(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -47,6 +57,18 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddToCart handles POST /api/cart and adds an item to the cart
+// @Summary Add item to cart
+// @Description Add a product to the user's shopping cart
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body AddToCartRequest true "Add to cart request"
+// @Success 201 {object} models.CartResponse
+// @Failure 400 {string} string "invalid request body"
+// @Failure 401 {string} string "unauthorized"
+// @Failure 404 {string} string "product not found"
+// @Router /api/cart [post]
 func AddToCart(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -108,6 +130,18 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateCartItem handles PUT /api/cart and updates a cart item quantity
+// @Summary Update cart item
+// @Description Update the quantity of an item in the user's cart
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateCartItemRequest true "Update cart item request"
+// @Success 200 {object} models.CartResponse
+// @Failure 400 {string} string "invalid request body"
+// @Failure 401 {string} string "unauthorized"
+// @Failure 404 {string} string "cart item not found"
+// @Router /api/cart [put]
 func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -187,6 +221,18 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteCartItem handles DELETE /api/cart and removes items from the cart
+// @Summary Delete cart items
+// @Description Remove items from the user's shopping cart
+// @Tags cart
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body DeleteCartItemRequest true "Delete cart items request"
+// @Success 200 {object} models.CartResponse
+// @Failure 400 {string} string "invalid request body"
+// @Failure 401 {string} string "unauthorized"
+// @Failure 404 {string} string "cart items not found"
+// @Router /api/cart [delete]
 func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {

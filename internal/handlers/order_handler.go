@@ -26,6 +26,15 @@ type RefundRequest struct {
 }
 
 // ListOrders handles GET /api/admin/orders and returns all orders, optionally filtered by status.
+// @Summary List orders
+// @Description Get a list of all orders with optional status filter (admin only)
+// @Tags admin-orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param status query string false "Filter by order status"
+// @Success 200 {array} models.Order
+// @Router /api/admin/orders [get]
 func ListOrders(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -42,6 +51,17 @@ func ListOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetOrder handles GET /api/admin/order?id=<id> and returns the order.
+// @Summary Get order
+// @Description Get an order by ID (admin only)
+// @Tags admin-orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query int true "Order ID"
+// @Success 200 {object} models.Order
+// @Failure 400 {string} string "id is required"
+// @Failure 404 {string} string "order not found"
+// @Router /api/admin/order [get]
 func GetOrder(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -65,6 +85,17 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateOrderStatus handles PUT /api/admin/order and updates the order status.
+// @Summary Update order status
+// @Description Update the status of an order (admin only)
+// @Tags admin-orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateOrderStatusRequest true "Order status update"
+// @Success 200 {object} models.Order
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "order not found"
+// @Router /api/admin/order [put]
 func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -103,6 +134,17 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // ProcessRefund handles POST /api/admin/order/refund and processes a refund for an order.
+// @Summary Process refund
+// @Description Process a refund for an order (admin only)
+// @Tags admin-orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body RefundRequest true "Refund request"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "order not found"
+// @Router /api/admin/order/refund [post]
 func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

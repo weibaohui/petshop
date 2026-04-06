@@ -203,6 +203,17 @@ func ResetPetsForTesting() {
 }
 
 // ListPets returns paginated list of pets
+// @Summary List pets
+// @Description Get a paginated list of pets with optional type filtering
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param type query string false "Filter by pet type"
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Page size (default: 10)"
+// @Success 200 {object} pagination.PagedResponse
+// @Failure 500 {object} map[string]string
+// @Router /api/pets [get]
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -244,6 +255,16 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPet returns a single pet by ID
+// @Summary Get pet by ID
+// @Description Get detailed information about a specific pet by its ID
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param id query int true "Pet ID"
+// @Success 200 {object} models.Pet
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/pet [get]
 func GetPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -284,6 +305,16 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePet deletes a pet by ID
+// @Summary Delete pet
+// @Description Delete a pet by its ID
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param id query int true "Pet ID"
+// @Success 200 {object} models.Pet
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/pet [delete]
 func DeletePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -320,6 +351,17 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchPets searches pets by name with pagination
+// @Summary Search pets
+// @Description Search pets by name with pagination support
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param name query string false "Search by pet name"
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Page size (default: 10)"
+// @Success 200 {object} pagination.PagedResponse
+// @Failure 500 {object} map[string]string
+// @Router /api/pet/search [get]
 func SearchPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
@@ -360,6 +402,17 @@ func containsIgnoreCase(s, substr string) bool {
 }
 
 // UpdatePet updates a pet with validation
+// @Summary Update pet
+// @Description Update an existing pet's information
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param id query int true "Pet ID (path parameter)"
+// @Param pet body models.Pet true "Pet data"
+// @Success 200 {object} models.Pet
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /api/pet [put]
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -624,12 +677,34 @@ func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetCategories returns all pet categories
+// @Summary Get pet categories
+// @Description Get a list of all available pet categories
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Category
+// @Router /api/v1/categories [get]
 func GetCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.Categories())
 }
 
 // FilterPets filters pets by multiple criteria
+// @Summary Filter pets
+// @Description Filter pets by type, status, price range, and search keyword
+// @Tags pets
+// @Accept json
+// @Produce json
+// @Param type query string false "Filter by pet type"
+// @Param status query string false "Filter by pet status"
+// @Param search query string false "Search by name or breed"
+// @Param minPrice query number false "Minimum price"
+// @Param maxPrice query number false "Maximum price"
+// @Param page query int false "Page number (default: 1)"
+// @Param pageSize query int false "Page size (default: 10)"
+// @Success 200 {object} pagination.PagedResponse
+// @Failure 400 {object} map[string]string
+// @Router /api/v1/pets [get]
 func FilterPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

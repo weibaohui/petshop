@@ -74,15 +74,46 @@ npm run dev
 
 ## API 文档
 
-### 宠物相关接口
+### Swagger UI
 
-| 方法 | 路径 | 描述 |
+项目集成了 Swagger/OpenAPI 文档，启动服务器后可以访问：
+
+- **Swagger UI**: http://localhost:8080/swagger/index.html
+- **API JSON**: http://localhost:8080/swagger/doc.json
+
+### 重新生成文档
+
+如果在代码中修改了 Swagger 注解，需要重新生成文档：
+
+```bash
+# 安装 swag 工具（如果尚未安装）
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# 生成文档
+swag init -g cmd/server/main.go --parseDependency --parseInternal
+```
+
+### API 概览
+
+| 分类 | 端点 | 描述 |
 |------|------|------|
-| GET | `/api/v1/pets` | 获取宠物列表（支持筛选） |
-| GET | `/api/v1/pets/:id` | 获取单个宠物详情 |
-| GET | `/api/v1/categories` | 获取宠物分类 |
-| GET | `/api/pets` | 获取宠物列表（旧接口） |
-| GET | `/api/pet?id=1` | 获取单个宠物 |
+| **宠物** | GET `/api/pets` | 获取宠物列表 |
+| **宠物** | GET `/api/pet?id=1` | 获取单个宠物详情 |
+| **宠物** | PUT `/api/pet` | 更新宠物信息 |
+| **宠物** | DELETE `/api/pet?id=1` | 删除宠物 |
+| **宠物** | GET `/api/pet/search` | 搜索宠物 |
+| **宠物** | GET `/api/v1/pets` | 筛选宠物 |
+| **宠物** | GET `/api/v1/categories` | 获取宠物分类 |
+| **购物车** | GET/POST/PUT/DELETE `/api/cart` | 购物车操作 |
+| **管理-商品** | GET/POST `/api/admin/products` | 商品列表/创建 |
+| **管理-商品** | GET/PUT/DELETE `/api/admin/product` | 商品操作 |
+| **管理-订单** | GET `/api/admin/orders` | 订单列表 |
+| **管理-订单** | GET/PUT `/api/admin/order` | 订单操作 |
+| **管理-用户** | GET `/api/admin/users` | 用户列表 |
+| **管理-用户** | GET/PUT `/api/admin/user` | 用户操作 |
+| **管理-库存** | GET `/api/admin/inventory/logs` | 库存日志 |
+| **管理-库存** | GET `/api/admin/inventory/alerts` | 库存预警 |
+| **系统** | GET `/health` | 健康检查 |
 
 ### 查询参数
 

@@ -35,6 +35,15 @@ type UpdateProductRequest struct {
 }
 
 // ListProducts handles GET /api/admin/products and returns all products.
+// @Summary List products
+// @Description Get a list of all products (admin only)
+// @Tags admin-products
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Product
+// @Failure 401 {string} string "unauthorized"
+// @Router /api/admin/products [get]
 func ListProducts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -49,6 +58,17 @@ func ListProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetProduct handles GET /api/admin/product?id=<id> and returns the product.
+// @Summary Get product
+// @Description Get a product by ID (admin only)
+// @Tags admin-products
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query int true "Product ID"
+// @Success 200 {object} models.Product
+// @Failure 400 {string} string "id is required"
+// @Failure 404 {string} string "product not found"
+// @Router /api/admin/product [get]
 func GetProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -72,6 +92,16 @@ func GetProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateProduct handles POST /api/admin/products and creates a new product.
+// @Summary Create product
+// @Description Create a new product (admin only)
+// @Tags admin-products
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateProductRequest true "Product data"
+// @Success 201 {object} models.Product
+// @Failure 400 {string} string "invalid request body"
+// @Router /api/admin/products [post]
 func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -132,6 +162,17 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateProduct handles PUT /api/admin/product and updates an existing product.
+// @Summary Update product
+// @Description Update an existing product (admin only)
+// @Tags admin-products
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateProductRequest true "Product data"
+// @Success 200 {object} models.Product
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "product not found"
+// @Router /api/admin/product [put]
 func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -210,6 +251,18 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteProduct handles DELETE /api/admin/product?id=<id> and marks a product as deleted.
+// @Summary Delete product
+// @Description Delete a product by ID (admin only)
+// @Tags admin-products
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query int true "Product ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "id is required"
+// @Failure 404 {string} string "product not found"
+// @Failure 409 {string} string "product has pending orders"
+// @Router /api/admin/product [delete]
 func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {

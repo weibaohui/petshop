@@ -24,6 +24,14 @@ type ResetPasswordRequest struct {
 }
 
 // ListUsers handles GET /api/admin/users and returns all users.
+// @Summary List users
+// @Description Get a list of all users (admin only)
+// @Tags admin-users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.User
+// @Router /api/admin/users [get]
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -36,6 +44,17 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetUser handles GET /api/admin/user?id=<id> and returns the user.
+// @Summary Get user
+// @Description Get a user by ID (admin only)
+// @Tags admin-users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query int true "User ID"
+// @Success 200 {object} models.User
+// @Failure 400 {string} string "id is required"
+// @Failure 404 {string} string "user not found"
+// @Router /api/admin/user [get]
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -59,6 +78,17 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateUserStatus handles PUT /api/admin/user and updates the user status.
+// @Summary Update user status
+// @Description Update a user's status (admin only)
+// @Tags admin-users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateUserStatusRequest true "User status update"
+// @Success 200 {object} models.User
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "user not found"
+// @Router /api/admin/user [put]
 func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -91,6 +121,17 @@ func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // ResetUserPassword handles POST /api/admin/user/reset-password and resets the user password.
+// @Summary Reset user password
+// @Description Reset a user's password (admin only)
+// @Tags admin-users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body ResetPasswordRequest true "Reset password request"
+// @Success 200 {object} map[string]string
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "user not found"
+// @Router /api/admin/user/reset-password [post]
 func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
