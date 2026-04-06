@@ -1,0 +1,2038 @@
+basePath: /
+definitions:
+  handlers.AddToCartRequest:
+    properties:
+      productId:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  handlers.CreateAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+  handlers.CreateCarouselRequest:
+    properties:
+      imageUrl:
+        type: string
+      linkUrl:
+        type: string
+      sortOrder:
+        type: integer
+      title:
+        type: string
+    type: object
+  handlers.CreateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        type: integer
+    type: object
+  handlers.DeleteCartItemRequest:
+    properties:
+      itemIds:
+        items:
+          type: integer
+        type: array
+    type: object
+  handlers.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  handlers.InventoryAdjustRequest:
+    properties:
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+    type: object
+  handlers.RefundRequest:
+    properties:
+      orderId:
+        type: integer
+      reason:
+        type: string
+    type: object
+  handlers.ResetPasswordRequest:
+    properties:
+      userId:
+        type: integer
+    type: object
+  handlers.SetSystemConfigRequest:
+    properties:
+      key:
+        type: string
+      value:
+        type: string
+    type: object
+  handlers.UpdateAnnouncementRequest:
+    properties:
+      content:
+        type: string
+      id:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  handlers.UpdateCartItemRequest:
+    properties:
+      itemId:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  handlers.UpdateOrderStatusRequest:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+    type: object
+  handlers.UpdateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      status:
+        type: string
+      stock:
+        type: integer
+    type: object
+  handlers.UpdateUserStatusRequest:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+    type: object
+  models.APIToken:
+    description: API Token 模型，用于 Open API 访问认证
+    properties:
+      createdAt:
+        type: string
+      createdBy:
+        description: 创建者用户ID
+        type: integer
+      expiresAt:
+        description: 过期时间，null表示永不过期
+        type: string
+      id:
+        type: integer
+      lastUsedAt:
+        type: string
+      name:
+        description: Token名称/描述
+        type: string
+      permissions:
+        description: 权限列表，逗号分隔，如 "read,write"
+        type: string
+      status:
+        description: active, disabled
+        type: string
+      token:
+        description: Token值（仅创建时返回）
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.APITokenCreateRequest:
+    properties:
+      expiresDays:
+        description: 0表示永不过期
+        type: integer
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      permissions:
+        description: 逗号分隔的权限列表
+        type: string
+    required:
+    - name
+    type: object
+  models.APITokenListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/models.APIToken'
+        type: array
+      total:
+        type: integer
+    type: object
+  models.APITokenStatusUpdateRequest:
+    properties:
+      status:
+        enum:
+        - active
+        - disabled
+        type: string
+    required:
+    - status
+    type: object
+  models.Announcement:
+    properties:
+      content:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      status:
+        description: active, inactive
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.Carousel:
+    properties:
+      id:
+        type: integer
+      imageUrl:
+        type: string
+      linkUrl:
+        type: string
+      sortOrder:
+        type: integer
+      status:
+        description: active, inactive
+        type: string
+      title:
+        type: string
+    type: object
+  models.Cart:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.CartItem'
+        type: array
+      totalItems:
+        description: Total number of items
+        type: integer
+      totalPrice:
+        description: Sum of all item subtotals
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  models.CartItem:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      price:
+        description: Unit price
+        type: number
+      productId:
+        description: Product ID
+        type: integer
+      productName:
+        description: Product name
+        type: string
+      quantity:
+        description: Quantity of this item
+        type: integer
+      subtotal:
+        description: Calculated subtotal (price * quantity)
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        description: User ID for persistence
+        type: integer
+    type: object
+  models.CartResponse:
+    properties:
+      cart:
+        $ref: '#/definitions/models.Cart'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  models.Category:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.HotProduct:
+    properties:
+      productId:
+        type: integer
+      productName:
+        type: string
+      salesAmount:
+        type: number
+      salesCount:
+        type: integer
+    type: object
+  models.Inventory:
+    properties:
+      afterStock:
+        type: integer
+      beforeStock:
+        type: integer
+      changeType:
+        description: in, out, adjust
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      operator:
+        type: string
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+    type: object
+  models.InventoryAlert:
+    properties:
+      currentStock:
+        type: integer
+      id:
+        type: integer
+      isRead:
+        type: boolean
+      productId:
+        type: integer
+      productName:
+        type: string
+      threshold:
+        type: integer
+    type: object
+  models.Order:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/models.OrderItem'
+        type: array
+      refundReason:
+        type: string
+      status:
+        description: pending, paid, shipped, delivered, cancelled, refunding, refunded
+        type: string
+      totalAmount:
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  models.OrderItem:
+    properties:
+      price:
+        type: number
+      productId:
+        type: integer
+      productName:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+    type: object
+  models.Pet:
+    description: 宠物信息模型
+    properties:
+      age:
+        description: Age is the age of the pet in months
+        example: 6
+        type: integer
+      ageDisplay:
+        description: AgeDisplay is a human-readable age string (e.g., "2个月", "1岁")
+        example: 6个月
+        type: string
+      breed:
+        description: Breed is the specific breed of the pet
+        example: 金毛寻回犬
+        type: string
+      createdAt:
+        description: CreatedAt is when the pet was added
+        example: "2024-01-10"
+        type: string
+      description:
+        description: Description is a detailed description of the pet
+        example: 活泼可爱的金毛宝宝
+        type: string
+      healthStatus:
+        description: HealthStatus describes the health condition of the pet
+        example: 健康状况良好
+        type: string
+      id:
+        description: ID is the unique identifier for the pet
+        example: 1
+        type: integer
+      name:
+        description: Name is the name of the pet
+        example: 旺财
+        type: string
+      photoUrls:
+        description: PhotoUrls contains a list of photo URLs for the pet
+        items:
+          type: string
+        type: array
+      price:
+        description: Price is the price of the pet in CNY
+        example: 3500
+        type: number
+      status:
+        description: Status indicates the availability of the pet (e.g., "available",
+          "pending", "sold")
+        example: available
+        type: string
+      type:
+        description: Type is the species or breed of the pet (e.g., "Dog", "Cat")
+        example: 狗狗
+        type: string
+      vaccinationRecords:
+        description: VaccinationRecords contains vaccination information
+        items:
+          $ref: '#/definitions/models.VaccinationRecord'
+        type: array
+    type: object
+  models.Product:
+    description: 商品信息模型
+    properties:
+      category:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      status:
+        description: on_sale, off_sale, deleted
+        type: string
+      stock:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.SalesStat:
+    properties:
+      date:
+        type: string
+      orderCount:
+        type: integer
+      totalSales:
+        type: number
+    type: object
+  models.SystemConfig:
+    properties:
+      key:
+        type: string
+      value:
+        type: string
+    type: object
+  models.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      role:
+        type: string
+      status:
+        description: active, disabled
+        type: string
+      username:
+        type: string
+    type: object
+  models.VaccinationRecord:
+    properties:
+      completed:
+        type: boolean
+      date:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: PetShop 宠物商店 API 文档 - 提供宠物管理、购物车、订单管理、用户管理等功能
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: PetShop API
+  version: "1.0"
+paths:
+  /api/admin/announcement:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除公告
+      parameters:
+      - description: 公告ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 公告不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 删除公告
+      tags:
+      - 公告管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有公告信息
+      parameters:
+      - description: 公告更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的公告
+          schema:
+            $ref: '#/definitions/models.Announcement'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 公告不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新公告
+      tags:
+      - 公告管理
+  /api/admin/announcements:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有公告
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 公告列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Announcement'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取公告列表
+      tags:
+      - 公告管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的公告
+      parameters:
+      - description: 公告创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateAnnouncementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功的公告
+          schema:
+            $ref: '#/definitions/models.Announcement'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 创建公告
+      tags:
+      - 公告管理
+  /api/admin/carousel:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除轮播图
+      parameters:
+      - description: 轮播图ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 轮播图不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 删除轮播图
+      tags:
+      - 轮播图管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有轮播图信息
+      parameters:
+      - description: 轮播图信息
+        in: body
+        name: carousel
+        required: true
+        schema:
+          $ref: '#/definitions/models.Carousel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的轮播图
+          schema:
+            $ref: '#/definitions/models.Carousel'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 轮播图不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新轮播图
+      tags:
+      - 轮播图管理
+  /api/admin/carousels:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有轮播图
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 轮播图列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Carousel'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取轮播图列表
+      tags:
+      - 轮播图管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的轮播图
+      parameters:
+      - description: 轮播图创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateCarouselRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功的轮播图
+          schema:
+            $ref: '#/definitions/models.Carousel'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 创建轮播图
+      tags:
+      - 轮播图管理
+  /api/admin/config:
+    post:
+      consumes:
+      - application/json
+      description: 设置系统配置值。如果key为"inventory_threshold"，会更新库存预警阈值
+      parameters:
+      - description: 系统配置设置请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SetSystemConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 设置系统配置
+      tags:
+      - 系统配置
+  /api/admin/configs:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有系统配置项
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 系统配置列表
+          schema:
+            items:
+              $ref: '#/definitions/models.SystemConfig'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取系统配置列表
+      tags:
+      - 系统配置
+  /api/admin/inventory/adjust:
+    post:
+      consumes:
+      - application/json
+      description: 调整指定商品的库存数量（增加或减少）
+      parameters:
+      - description: 库存调整请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.InventoryAdjustRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的商品信息
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 商品不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 调整商品库存
+      tags:
+      - 库存管理
+  /api/admin/inventory/alerts:
+    get:
+      consumes:
+      - application/json
+      description: 获取库存低于预警阈值的商品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 库存预警列表
+          schema:
+            items:
+              $ref: '#/definitions/models.InventoryAlert'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取库存预警
+      tags:
+      - 库存管理
+  /api/admin/inventory/logs:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有库存变更记录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 库存变更日志列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Inventory'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取库存变更日志
+      tags:
+      - 库存管理
+  /api/admin/order:
+    get:
+      consumes:
+      - application/json
+      description: 根据订单ID获取订单详细信息
+      parameters:
+      - description: 订单ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单详情
+          schema:
+            $ref: '#/definitions/models.Order'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 订单不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取订单详情
+      tags:
+      - 订单管理
+    put:
+      consumes:
+      - application/json
+      description: 更新订单的状态
+      parameters:
+      - description: 状态更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的订单
+          schema:
+            $ref: '#/definitions/models.Order'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 订单不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新订单状态
+      tags:
+      - 订单管理
+  /api/admin/order/refund:
+    post:
+      consumes:
+      - application/json
+      description: 为订单处理退款并恢复库存
+      parameters:
+      - description: 退款请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RefundRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退款成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 订单不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 处理订单退款
+      tags:
+      - 订单管理
+  /api/admin/orders:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有订单列表，支持按状态筛选
+      parameters:
+      - description: 订单状态筛选 (pending, paid, shipped, delivered, cancelled, refunding,
+          refunded)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 订单列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Order'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取订单列表
+      tags:
+      - 订单管理
+  /api/admin/product:
+    delete:
+      consumes:
+      - application/json
+      description: 将商品标记为已删除（软删除）
+      parameters:
+      - description: 商品ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 商品不存在
+          schema:
+            type: string
+        "409":
+          description: 商品有待处理订单
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 删除商品
+      tags:
+      - 商品管理
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取商品详细信息
+      parameters:
+      - description: 商品ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 商品详情
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 商品不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取商品详情
+      tags:
+      - 商品管理
+    put:
+      consumes:
+      - application/json
+      description: 更新现有商品信息
+      parameters:
+      - description: 商品更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的商品
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 商品不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新商品
+      tags:
+      - 商品管理
+  /api/admin/products:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有商品列表（不包括已删除的）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 商品列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Product'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取商品列表
+      tags:
+      - 商品管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新商品
+      parameters:
+      - description: 商品创建请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功的商品
+          schema:
+            $ref: '#/definitions/models.Product'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 创建商品
+      tags:
+      - 商品管理
+  /api/admin/stats/hot-products:
+    get:
+      consumes:
+      - application/json
+      description: 获取销量最高的商品列表
+      parameters:
+      - default: 10
+        description: 返回数量限制
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 热销商品列表
+          schema:
+            items:
+              $ref: '#/definitions/models.HotProduct'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取热销商品
+      tags:
+      - 销售统计
+  /api/admin/stats/sales:
+    get:
+      consumes:
+      - application/json
+      description: 获取销售统计数据，支持日、周、月维度
+      parameters:
+      - default: day
+        description: 统计周期 (day:最近7天, week:最近4周, month:最近6月)
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 销售统计数据
+          schema:
+            items:
+              $ref: '#/definitions/models.SalesStat'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取销售统计
+      tags:
+      - 销售统计
+  /api/admin/token:
+    delete:
+      consumes:
+      - application/json
+      description: 删除指定的API Token
+      parameters:
+      - description: Token ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 删除API Token
+      tags:
+      - API Token管理
+    put:
+      consumes:
+      - application/json
+      description: 启用或禁用指定的API Token
+      parameters:
+      - description: Token ID
+        in: query
+        name: id
+        required: true
+        type: string
+      - description: 状态更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.APITokenStatusUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 更新API Token状态
+      tags:
+      - API Token管理
+  /api/admin/tokens:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取所有API Token列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token列表
+          schema:
+            $ref: '#/definitions/models.APITokenListResponse'
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取API Token列表
+      tags:
+      - API Token管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新的API Token用于Open API访问
+      parameters:
+      - description: 创建Token请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.APITokenCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 创建成功的Token（仅返回一次完整token）
+          schema:
+            $ref: '#/definitions/models.APIToken'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建API Token
+      tags:
+      - API Token管理
+  /api/admin/user:
+    get:
+      consumes:
+      - application/json
+      description: 根据ID获取用户详细信息
+      parameters:
+      - description: 用户ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户详情
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 用户不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取用户详情
+      tags:
+      - 用户管理
+    put:
+      consumes:
+      - application/json
+      description: 启用或禁用用户账户
+      parameters:
+      - description: 状态更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的用户信息
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 用户不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新用户状态
+      tags:
+      - 用户管理
+  /api/admin/user/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: 重置指定用户的密码
+      parameters:
+      - description: 密码重置请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重置成功消息
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 用户不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 重置用户密码
+      tags:
+      - 用户管理
+  /api/admin/users:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有用户列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "401":
+          description: 未授权
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+  /api/cart:
+    delete:
+      consumes:
+      - application/json
+      description: 从购物车中删除指定商品
+      parameters:
+      - description: 删除请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.DeleteCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除后的购物车
+          schema:
+            $ref: '#/definitions/models.CartResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 购物车项不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 从购物车删除商品
+      tags:
+      - 购物车
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的购物车内容
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 购物车信息
+          schema:
+            $ref: '#/definitions/models.CartResponse'
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "500":
+          description: 服务器内部错误
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 获取购物车
+      tags:
+      - 购物车
+    post:
+      consumes:
+      - application/json
+      description: 将商品添加到当前用户的购物车
+      parameters:
+      - description: 添加商品请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 添加成功后的购物车
+          schema:
+            $ref: '#/definitions/models.CartResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 商品不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 添加商品到购物车
+      tags:
+      - 购物车
+    put:
+      consumes:
+      - application/json
+      description: 更新购物车中指定商品的数量
+      parameters:
+      - description: 更新请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的购物车
+          schema:
+            $ref: '#/definitions/models.CartResponse'
+        "400":
+          description: 请求参数错误
+          schema:
+            type: string
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "404":
+          description: 购物车项不存在
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 更新购物车商品数量
+      tags:
+      - 购物车
+  /api/cart/clear:
+    delete:
+      consumes:
+      - application/json
+      description: 清空当前用户的购物车中的所有商品
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 清空后的购物车
+          schema:
+            $ref: '#/definitions/models.CartResponse'
+        "401":
+          description: 未授权
+          schema:
+            type: string
+        "500":
+          description: 服务器内部错误
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: 清空购物车
+      tags:
+      - 购物车
+  /api/pet:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除宠物
+      parameters:
+      - description: 宠物ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 已删除的宠物信息
+          schema:
+            $ref: '#/definitions/models.Pet'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 宠物未找到
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 删除宠物
+      tags:
+      - 宠物管理
+    get:
+      consumes:
+      - application/json
+      description: 根据宠物ID获取详细信息，支持缓存
+      parameters:
+      - description: 宠物ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 宠物详情
+          schema:
+            $ref: '#/definitions/models.Pet'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 宠物未找到
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取宠物详情
+      tags:
+      - 宠物管理
+    put:
+      consumes:
+      - application/json
+      description: 更新宠物的详细信息，支持部分字段更新
+      parameters:
+      - description: 宠物信息
+        in: body
+        name: pet
+        required: true
+        schema:
+          $ref: '#/definitions/models.Pet'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的宠物信息
+          schema:
+            $ref: '#/definitions/models.Pet'
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 宠物未找到
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 更新宠物
+      tags:
+      - 宠物管理
+  /api/pet/cache/hitrate:
+    get:
+      consumes:
+      - application/json
+      description: 获取宠物缓存的命中率
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 缓存命中率
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取缓存命中率
+      tags:
+      - 缓存管理
+  /api/pet/cache/stats:
+    get:
+      consumes:
+      - application/json
+      description: 获取宠物缓存的统计信息，包括条目数、命中率等
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 缓存统计信息
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取缓存统计
+      tags:
+      - 缓存管理
+  /api/pet/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据宠物名称搜索，支持分页
+      parameters:
+      - description: 宠物名称关键词
+        in: query
+        name: name
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 搜索结果
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 搜索宠物
+      tags:
+      - 宠物管理
+  /api/pets:
+    get:
+      consumes:
+      - application/json
+      description: 获取分页的宠物列表，支持按类型筛选
+      parameters:
+      - description: 宠物类型筛选
+        in: query
+        name: type
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 分页的宠物列表
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 获取宠物列表
+      tags:
+      - 宠物管理
+  /api/v1/categories:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有可用的宠物分类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 分类列表
+          schema:
+            items:
+              $ref: '#/definitions/models.Category'
+            type: array
+      summary: 获取宠物分类
+      tags:
+      - 宠物管理
+  /api/v1/pets:
+    get:
+      consumes:
+      - application/json
+      description: 根据类型、状态、价格范围、搜索关键词等条件筛选宠物
+      parameters:
+      - description: 宠物类型
+        in: query
+        name: type
+        type: string
+      - description: 宠物状态 (available, pending, sold)
+        in: query
+        name: status
+        type: string
+      - description: 最低价格
+        in: query
+        name: minPrice
+        type: number
+      - description: 最高价格
+        in: query
+        name: maxPrice
+        type: number
+      - description: 搜索关键词（名称或品种）
+        in: query
+        name: search
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 筛选结果
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 请求参数错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 筛选宠物
+      tags:
+      - 宠物管理
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: 检查服务健康状态，包括数据库连接状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务健康
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+        "503":
+          description: 服务不可用
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: 健康检查
+      tags:
+      - 系统
+securityDefinitions:
+  APITokenAuth:
+    description: 使用 API Token 进行认证，用于 Open API 访问
+    in: header
+    name: X-API-Token
+    type: apiKey
+  BearerAuth:
+    description: 使用 JWT Token 进行认证，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

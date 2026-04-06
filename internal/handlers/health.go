@@ -17,8 +17,15 @@ type HealthResponse struct {
 	Checks    map[string]string `json:"checks"`
 }
 
-// HealthCheck handles the /health endpoint
-// Returns the health status of the service including database connectivity
+// HealthCheck 健康检查端点
+// @Summary 健康检查
+// @Description 检查服务健康状态，包括数据库连接状态
+// @Tags 系统
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse "服务健康"
+// @Failure 503 {object} HealthResponse "服务不可用"
+// @Router /health [get]
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

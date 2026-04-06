@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 系统配置管理处理器
 package handlers
 
 import (
@@ -17,7 +20,16 @@ type SetSystemConfigRequest struct {
 	Value string `json:"value"`
 }
 
-// GetSystemConfigs handles GET /api/admin/configs and returns all system configurations.
+// GetSystemConfigs 获取系统配置列表
+// @Summary 获取系统配置列表
+// @Description 获取所有系统配置项
+// @Tags 系统配置
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.SystemConfig "系统配置列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/configs [get]
 func GetSystemConfigs(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -29,8 +41,18 @@ func GetSystemConfigs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(configs)
 }
 
-// SetSystemConfig handles POST /api/admin/config and sets a system configuration value.
-// If the key is "inventory_threshold", it updates the inventory alert threshold.
+// SetSystemConfig 设置系统配置
+// @Summary 设置系统配置
+// @Description 设置系统配置值。如果key为"inventory_threshold"，会更新库存预警阈值
+// @Tags 系统配置
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body SetSystemConfigRequest true "系统配置设置请求"
+// @Success 200 {object} map[string]string "设置成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/config [post]
 func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

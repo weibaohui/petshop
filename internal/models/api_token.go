@@ -1,8 +1,12 @@
+// Package models provides data models for the petshop system.
+//
+// @Description API Token 相关数据模型
 package models
 
 import "time"
 
 // APIToken 开放API调用令牌
+// @Description API Token 模型，用于 Open API 访问认证
 type APIToken struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`        // Token名称/描述

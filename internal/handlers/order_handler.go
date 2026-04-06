@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 订单管理处理器
 package handlers
 
 import (
@@ -25,7 +28,17 @@ type RefundRequest struct {
 	Reason  string `json:"reason"`
 }
 
-// ListOrders handles GET /api/admin/orders and returns all orders, optionally filtered by status.
+// ListOrders 获取订单列表
+// @Summary 获取订单列表
+// @Description 获取所有订单列表，支持按状态筛选
+// @Tags 订单管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param status query string false "订单状态筛选 (pending, paid, shipped, delivered, cancelled, refunding, refunded)"
+// @Success 200 {array} models.Order "订单列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/orders [get]
 func ListOrders(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -41,7 +54,19 @@ func ListOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orderList)
 }
 
-// GetOrder handles GET /api/admin/order?id=<id> and returns the order.
+// GetOrder 获取订单详情
+// @Summary 获取订单详情
+// @Description 根据订单ID获取订单详细信息
+// @Tags 订单管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "订单ID"
+// @Success 200 {object} models.Order "订单详情"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "订单不存在"
+// @Router /api/admin/order [get]
 func GetOrder(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -64,7 +89,19 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "order not found", http.StatusNotFound)
 }
 
-// UpdateOrderStatus handles PUT /api/admin/order and updates the order status.
+// UpdateOrderStatus 更新订单状态
+// @Summary 更新订单状态
+// @Description 更新订单的状态
+// @Tags 订单管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateOrderStatusRequest true "状态更新请求"
+// @Success 200 {object} models.Order "更新后的订单"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "订单不存在"
+// @Router /api/admin/order [put]
 func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -102,7 +139,19 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(o)
 }
 
-// ProcessRefund handles POST /api/admin/order/refund and processes a refund for an order.
+// ProcessRefund 处理订单退款
+// @Summary 处理订单退款
+// @Description 为订单处理退款并恢复库存
+// @Tags 订单管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body RefundRequest true "退款请求"
+// @Success 200 {object} map[string]string "退款成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "订单不存在"
+// @Router /api/admin/order/refund [post]
 func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

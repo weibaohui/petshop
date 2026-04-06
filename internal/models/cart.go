@@ -1,3 +1,6 @@
+// Package models provides data models for the petshop system.
+//
+// @Description 购物车相关数据模型
 package models
 
 import "time"

@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 轮播图管理处理器
 package handlers
 
 import (
@@ -19,7 +22,16 @@ type CreateCarouselRequest struct {
 	Title     string `json:"title"`
 }
 
-// ListCarousels handles GET /api/admin/carousels and returns all carousels.
+// ListCarousels 获取轮播图列表
+// @Summary 获取轮播图列表
+// @Description 获取所有轮播图
+// @Tags 轮播图管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Carousel "轮播图列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/carousels [get]
 func ListCarousels(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -31,7 +43,18 @@ func ListCarousels(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(carouselList)
 }
 
-// CreateCarousel handles POST /api/admin/carousels and creates a new carousel.
+// CreateCarousel 创建轮播图
+// @Summary 创建轮播图
+// @Description 创建新的轮播图
+// @Tags 轮播图管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateCarouselRequest true "轮播图创建请求"
+// @Success 201 {object} models.Carousel "创建成功的轮播图"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/carousels [post]
 func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -68,7 +91,19 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
-// UpdateCarousel handles PUT /api/admin/carousel and updates an existing carousel.
+// UpdateCarousel 更新轮播图
+// @Summary 更新轮播图
+// @Description 更新现有轮播图信息
+// @Tags 轮播图管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param carousel body models.Carousel true "轮播图信息"
+// @Success 200 {object} models.Carousel "更新后的轮播图"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "轮播图不存在"
+// @Router /api/admin/carousel [put]
 func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -105,7 +140,19 @@ func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "carousel not found", http.StatusNotFound)
 }
 
-// DeleteCarousel handles DELETE /api/admin/carousel?id=<id> and deletes the carousel.
+// DeleteCarousel 删除轮播图
+// @Summary 删除轮播图
+// @Description 根据ID删除轮播图
+// @Tags 轮播图管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "轮播图ID"
+// @Success 200 {object} map[string]string "删除成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "轮播图不存在"
+// @Router /api/admin/carousel [delete]
 func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {

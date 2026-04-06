@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 商品管理处理器
 package handlers
 
 import (
@@ -34,7 +37,16 @@ type UpdateProductRequest struct {
 	Images      []string `json:"images"`
 }
 
-// ListProducts handles GET /api/admin/products and returns all products.
+// ListProducts 获取商品列表
+// @Summary 获取商品列表
+// @Description 获取所有商品列表（不包括已删除的）
+// @Tags 商品管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Product "商品列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/products [get]
 func ListProducts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -48,7 +60,19 @@ func ListProducts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(productList)
 }
 
-// GetProduct handles GET /api/admin/product?id=<id> and returns the product.
+// GetProduct 获取商品详情
+// @Summary 获取商品详情
+// @Description 根据ID获取商品详细信息
+// @Tags 商品管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "商品ID"
+// @Success 200 {object} models.Product "商品详情"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "商品不存在"
+// @Router /api/admin/product [get]
 func GetProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -71,7 +95,18 @@ func GetProduct(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "product not found", http.StatusNotFound)
 }
 
-// CreateProduct handles POST /api/admin/products and creates a new product.
+// CreateProduct 创建商品
+// @Summary 创建商品
+// @Description 创建新商品
+// @Tags 商品管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateProductRequest true "商品创建请求"
+// @Success 201 {object} models.Product "创建成功的商品"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/products [post]
 func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -131,7 +166,19 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-// UpdateProduct handles PUT /api/admin/product and updates an existing product.
+// UpdateProduct 更新商品
+// @Summary 更新商品
+// @Description 更新现有商品信息
+// @Tags 商品管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateProductRequest true "商品更新请求"
+// @Success 200 {object} models.Product "更新后的商品"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "商品不存在"
+// @Router /api/admin/product [put]
 func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -209,7 +256,20 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(p)
 }
 
-// DeleteProduct handles DELETE /api/admin/product?id=<id> and marks a product as deleted.
+// DeleteProduct 删除商品
+// @Summary 删除商品
+// @Description 将商品标记为已删除（软删除）
+// @Tags 商品管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "商品ID"
+// @Success 200 {object} map[string]string "删除成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "商品不存在"
+// @Failure 409 {string} string "商品有待处理订单"
+// @Router /api/admin/product [delete]
 func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {

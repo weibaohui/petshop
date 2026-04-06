@@ -1,4 +1,6 @@
 // Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description PetShop API 处理器
 package handlers
 
 import (
@@ -202,7 +204,18 @@ func ResetPetsForTesting() {
 	}
 }
 
-// ListPets returns paginated list of pets
+// ListPets 返回分页的宠物列表
+// @Summary 获取宠物列表
+// @Description 获取分页的宠物列表，支持按类型筛选
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param type query string false "宠物类型筛选"
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Success 200 {object} map[string]interface{} "分页的宠物列表"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/pets [get]
 func ListPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -243,7 +256,17 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
 
-// GetPet returns a single pet by ID
+// GetPet 根据ID获取单个宠物详情
+// @Summary 获取宠物详情
+// @Description 根据宠物ID获取详细信息，支持缓存
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param id query string true "宠物ID"
+// @Success 200 {object} models.Pet "宠物详情"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 404 {object} map[string]string "宠物未找到"
+// @Router /api/pet [get]
 func GetPet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -283,7 +306,17 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// DeletePet deletes a pet by ID
+// DeletePet 删除宠物
+// @Summary 删除宠物
+// @Description 根据ID删除宠物
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param id query string true "宠物ID"
+// @Success 200 {object} models.Pet "已删除的宠物信息"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 404 {object} map[string]string "宠物未找到"
+// @Router /api/pet [delete]
 func DeletePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	idStr := r.URL.Query().Get("id")
@@ -319,7 +352,18 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
-// SearchPets searches pets by name with pagination
+// SearchPets 根据名称搜索宠物
+// @Summary 搜索宠物
+// @Description 根据宠物名称搜索，支持分页
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param name query string false "宠物名称关键词"
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Success 200 {object} map[string]interface{} "搜索结果"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/pet/search [get]
 func SearchPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	nameParam := r.URL.Query().Get("name")
@@ -359,7 +403,17 @@ func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-// UpdatePet updates a pet with validation
+// UpdatePet 更新宠物信息
+// @Summary 更新宠物
+// @Description 更新宠物的详细信息，支持部分字段更新
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param pet body models.Pet true "宠物信息"
+// @Success 200 {object} models.Pet "更新后的宠物信息"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 404 {object} map[string]string "宠物未找到"
+// @Router /api/pet [put]
 func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -609,13 +663,27 @@ func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetCacheStats returns cache statistics
+// GetCacheStats 获取缓存统计信息
+// @Summary 获取缓存统计
+// @Description 获取宠物缓存的统计信息，包括条目数、命中率等
+// @Tags 缓存管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "缓存统计信息"
+// @Router /api/pet/cache/stats [get]
 func GetCacheStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(petCache.Stats())
 }
 
-// GetCacheHitRate returns the cache hit rate
+// GetCacheHitRate 获取缓存命中率
+// @Summary 获取缓存命中率
+// @Description 获取宠物缓存的命中率
+// @Tags 缓存管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "缓存命中率"
+// @Router /api/pet/cache/hitrate [get]
 func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -623,13 +691,35 @@ func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetCategories returns all pet categories
+// GetCategories 获取所有宠物分类
+// @Summary 获取宠物分类
+// @Description 获取所有可用的宠物分类列表
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Category "分类列表"
+// @Router /api/v1/categories [get]
 func GetCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.Categories())
 }
 
-// FilterPets filters pets by multiple criteria
+// FilterPets 根据多个条件筛选宠物
+// @Summary 筛选宠物
+// @Description 根据类型、状态、价格范围、搜索关键词等条件筛选宠物
+// @Tags 宠物管理
+// @Accept json
+// @Produce json
+// @Param type query string false "宠物类型"
+// @Param status query string false "宠物状态 (available, pending, sold)"
+// @Param minPrice query number false "最低价格"
+// @Param maxPrice query number false "最高价格"
+// @Param search query string false "搜索关键词（名称或品种）"
+// @Param page query int false "页码" default(1)
+// @Param pageSize query int false "每页数量" default(10)
+// @Success 200 {object} map[string]interface{} "筛选结果"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Router /api/v1/pets [get]
 func FilterPets(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

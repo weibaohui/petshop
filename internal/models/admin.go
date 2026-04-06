@@ -1,8 +1,12 @@
+// Package models provides data models for the petshop system.
+//
+// @Description 管理员相关数据模型（商品、订单、用户、库存等）
 package models
 
 import "time"
 
 // Product 商品
+// @Description 商品信息模型
 type Product struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`

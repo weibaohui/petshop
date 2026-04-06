@@ -1,3 +1,28 @@
+// @title PetShop API
+// @version 1.0
+// @description PetShop 宠物商店 API 文档 - 提供宠物管理、购物车、订单管理、用户管理等功能
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 使用 JWT Token 进行认证，格式：Bearer {token}
+
+// @securityDefinitions.apikey APITokenAuth
+// @in header
+// @name X-API-Token
+// @description 使用 API Token 进行认证，用于 Open API 访问
+
 package main
 
 import (
@@ -16,6 +41,9 @@ import (
 	"petshop/internal/handlers"
 	"petshop/internal/logger"
 	"petshop/internal/middleware"
+
+	_ "petshop/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // serverConfig holds server configuration for testing
@@ -276,6 +304,11 @@ func handleOpenAPIPetPath(w http.ResponseWriter, r *http.Request) {
 
 // setupRoutes registers all API routes to the given mux
 func setupRoutes(mux *http.ServeMux) {
+	// Swagger UI
+	mux.HandleFunc("/swagger/", func(w http.ResponseWriter, r *http.Request) {
+		httpSwagger.WrapHandler(w, r)
+	})
+
 	// Pet routes
 	mux.HandleFunc("/api/pets", handlers.ListPets)
 	registerRoute(mux, "/api/v1/pets", handlers.FilterPets)

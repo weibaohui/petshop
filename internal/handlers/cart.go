@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 购物车相关处理器
 package handlers
 
 import (
@@ -26,7 +29,17 @@ type DeleteCartItemRequest struct {
 	ItemIDs []int64 `json:"itemIds"`
 }
 
-// GetCart handles GET /api/cart and returns the user's cart
+// GetCart 获取当前用户的购物车
+// @Summary 获取购物车
+// @Description 获取当前登录用户的购物车内容
+// @Tags 购物车
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.CartResponse "购物车信息"
+// @Failure 401 {string} string "未授权"
+// @Failure 500 {string} string "服务器内部错误"
+// @Router /api/cart [get]
 func GetCart(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -46,7 +59,19 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart retrieved", Cart: cart})
 }
 
-// AddToCart handles POST /api/cart and adds an item to the cart
+// AddToCart 添加商品到购物车
+// @Summary 添加商品到购物车
+// @Description 将商品添加到当前用户的购物车
+// @Tags 购物车
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body AddToCartRequest true "添加商品请求"
+// @Success 201 {object} models.CartResponse "添加成功后的购物车"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "商品不存在"
+// @Router /api/cart [post]
 func AddToCart(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -107,7 +132,19 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Item added to cart", Cart: cart})
 }
 
-// UpdateCartItem handles PUT /api/cart and updates a cart item quantity
+// UpdateCartItem 更新购物车商品数量
+// @Summary 更新购物车商品数量
+// @Description 更新购物车中指定商品的数量
+// @Tags 购物车
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateCartItemRequest true "更新请求"
+// @Success 200 {object} models.CartResponse "更新后的购物车"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "购物车项不存在"
+// @Router /api/cart [put]
 func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -186,7 +223,19 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart item updated", Cart: cart})
 }
 
-// DeleteCartItem handles DELETE /api/cart and removes items from the cart
+// DeleteCartItem 从购物车删除商品
+// @Summary 从购物车删除商品
+// @Description 从购物车中删除指定商品
+// @Tags 购物车
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body DeleteCartItemRequest true "删除请求"
+// @Success 200 {object} models.CartResponse "删除后的购物车"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "购物车项不存在"
+// @Router /api/cart [delete]
 func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -249,7 +298,17 @@ func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Items deleted", Cart: cart})
 }
 
-// ClearCart handles DELETE /api/cart/clear and removes all items from the user's cart
+// ClearCart 清空购物车
+// @Summary 清空购物车
+// @Description 清空当前用户的购物车中的所有商品
+// @Tags 购物车
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.CartResponse "清空后的购物车"
+// @Failure 401 {string} string "未授权"
+// @Failure 500 {string} string "服务器内部错误"
+// @Router /api/cart/clear [delete]
 func ClearCart(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {

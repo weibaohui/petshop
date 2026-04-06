@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 库存管理处理器
 package handlers
 
 import (
@@ -18,7 +21,16 @@ type InventoryAdjustRequest struct {
 	Reason    string `json:"reason"`
 }
 
-// ListInventoryLogs handles GET /api/admin/inventory/logs and returns all inventory change logs.
+// ListInventoryLogs 获取库存变更日志
+// @Summary 获取库存变更日志
+// @Description 获取所有库存变更记录
+// @Tags 库存管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Inventory "库存变更日志列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/inventory/logs [get]
 func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -26,7 +38,16 @@ func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(inventoryLogs)
 }
 
-// GetInventoryAlerts handles GET /api/admin/inventory/alerts and returns products with low stock.
+// GetInventoryAlerts 获取库存预警
+// @Summary 获取库存预警
+// @Description 获取库存低于预警阈值的商品列表
+// @Tags 库存管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.InventoryAlert "库存预警列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/inventory/alerts [get]
 func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -45,7 +66,19 @@ func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(alerts)
 }
 
-// AdjustInventory handles POST /api/admin/inventory/adjust and adjusts product stock quantity.
+// AdjustInventory 调整库存
+// @Summary 调整商品库存
+// @Description 调整指定商品的库存数量（增加或减少）
+// @Tags 库存管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body InventoryAdjustRequest true "库存调整请求"
+// @Success 200 {object} models.Product "更新后的商品信息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "商品不存在"
+// @Router /api/admin/inventory/adjust [post]
 func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

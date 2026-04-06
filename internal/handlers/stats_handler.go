@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 销售统计处理器
 package handlers
 
 import (
@@ -11,8 +14,17 @@ import (
 
 // Sales statistics functions
 
-// GetSalesStats handles GET /api/admin/stats/sales and returns sales statistics.
-// Query param 'period' can be: day (last 7 days), week (last 4 weeks), month (last 6 months).
+// GetSalesStats 获取销售统计
+// @Summary 获取销售统计
+// @Description 获取销售统计数据，支持日、周、月维度
+// @Tags 销售统计
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param period query string false "统计周期 (day:最近7天, week:最近4周, month:最近6月)" default(day)
+// @Success 200 {array} models.SalesStat "销售统计数据"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/stats/sales [get]
 func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 	period := r.URL.Query().Get("period")
 	if period == "" {
@@ -96,8 +108,17 @@ func getWeekStart(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day()-weekday+1, 0, 0, 0, 0, time.Local)
 }
 
-// GetHotProducts handles GET /api/admin/stats/hot-products and returns top selling products.
-// Query param 'limit' sets the maximum number of products to return (default 10).
+// GetHotProducts 获取热销商品
+// @Summary 获取热销商品
+// @Description 获取销量最高的商品列表
+// @Tags 销售统计
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "返回数量限制" default(10)
+// @Success 200 {array} models.HotProduct "热销商品列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/stats/hot-products [get]
 func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10

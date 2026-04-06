@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 公告管理处理器
 package handlers
 
 import (
@@ -26,7 +29,16 @@ type UpdateAnnouncementRequest struct {
 	Status  *string `json:"status"`
 }
 
-// ListAnnouncements handles GET /api/admin/announcements and returns all announcements.
+// ListAnnouncements 获取公告列表
+// @Summary 获取公告列表
+// @Description 获取所有公告
+// @Tags 公告管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Announcement "公告列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/announcements [get]
 func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -38,7 +50,18 @@ func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(announcementList)
 }
 
-// CreateAnnouncement handles POST /api/admin/announcements and creates a new announcement.
+// CreateAnnouncement 创建公告
+// @Summary 创建公告
+// @Description 创建新的公告
+// @Tags 公告管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body CreateAnnouncementRequest true "公告创建请求"
+// @Success 201 {object} models.Announcement "创建成功的公告"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/announcements [post]
 func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -76,7 +99,19 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(a)
 }
 
-// UpdateAnnouncement handles PUT /api/admin/announcement and updates an existing announcement.
+// UpdateAnnouncement 更新公告
+// @Summary 更新公告
+// @Description 更新现有公告信息
+// @Tags 公告管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateAnnouncementRequest true "公告更新请求"
+// @Success 200 {object} models.Announcement "更新后的公告"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "公告不存在"
+// @Router /api/admin/announcement [put]
 func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -110,7 +145,19 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "announcement not found", http.StatusNotFound)
 }
 
-// DeleteAnnouncement handles DELETE /api/admin/announcement?id=<id> and deletes the announcement.
+// DeleteAnnouncement 删除公告
+// @Summary 删除公告
+// @Description 根据ID删除公告
+// @Tags 公告管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "公告ID"
+// @Success 200 {object} map[string]string "删除成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "公告不存在"
+// @Router /api/admin/announcement [delete]
 func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {

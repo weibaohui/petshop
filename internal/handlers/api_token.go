@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description API Token 管理处理器
 package handlers
 
 import (
@@ -26,6 +29,18 @@ func generateRandomToken() (string, error) {
 }
 
 // CreateAPIToken 创建新的API Token
+// @Summary 创建API Token
+// @Description 创建新的API Token用于Open API访问
+// @Tags API Token管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.APITokenCreateRequest true "创建Token请求"
+// @Success 201 {object} models.APIToken "创建成功的Token（仅返回一次完整token）"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 401 {object} map[string]string "未授权"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/admin/tokens [post]
 func CreateAPIToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -103,6 +118,18 @@ func CreateAPIToken(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListAPITokens 获取API Token列表
+// @Summary 获取API Token列表
+// @Description 分页获取所有API Token列表
+// @Tags API Token管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param limit query int false "每页数量" default(10)
+// @Success 200 {object} models.APITokenListResponse "Token列表"
+// @Failure 401 {object} map[string]string "未授权"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/admin/tokens [get]
 func ListAPITokens(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -132,6 +159,19 @@ func ListAPITokens(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateAPITokenStatus 更新API Token状态
+// @Summary 更新API Token状态
+// @Description 启用或禁用指定的API Token
+// @Tags API Token管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "Token ID"
+// @Param request body models.APITokenStatusUpdateRequest true "状态更新请求"
+// @Success 200 {object} map[string]string "更新成功消息"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 401 {object} map[string]string "未授权"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/admin/token [put]
 func UpdateAPITokenStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -183,6 +223,18 @@ func UpdateAPITokenStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAPIToken 删除API Token
+// @Summary 删除API Token
+// @Description 删除指定的API Token
+// @Tags API Token管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "Token ID"
+// @Success 200 {object} map[string]string "删除成功消息"
+// @Failure 400 {object} map[string]string "请求参数错误"
+// @Failure 401 {object} map[string]string "未授权"
+// @Failure 500 {object} map[string]string "服务器内部错误"
+// @Router /api/admin/token [delete]
 func DeleteAPIToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

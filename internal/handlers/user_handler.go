@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the petshop API.
+//
+// @Description 用户管理处理器
 package handlers
 
 import (
@@ -23,7 +26,16 @@ type ResetPasswordRequest struct {
 	UserID int64 `json:"userId"`
 }
 
-// ListUsers handles GET /api/admin/users and returns all users.
+// ListUsers 获取用户列表
+// @Summary 获取用户列表
+// @Description 获取所有用户列表
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.User "用户列表"
+// @Failure 401 {string} string "未授权"
+// @Router /api/admin/users [get]
 func ListUsers(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -35,7 +47,19 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userList)
 }
 
-// GetUser handles GET /api/admin/user?id=<id> and returns the user.
+// GetUser 获取用户详情
+// @Summary 获取用户详情
+// @Description 根据ID获取用户详细信息
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id query string true "用户ID"
+// @Success 200 {object} models.User "用户详情"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "用户不存在"
+// @Router /api/admin/user [get]
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
@@ -58,7 +82,19 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "user not found", http.StatusNotFound)
 }
 
-// UpdateUserStatus handles PUT /api/admin/user and updates the user status.
+// UpdateUserStatus 更新用户状态
+// @Summary 更新用户状态
+// @Description 启用或禁用用户账户
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateUserStatusRequest true "状态更新请求"
+// @Success 200 {object} models.User "更新后的用户信息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "用户不存在"
+// @Router /api/admin/user [put]
 func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -90,7 +126,19 @@ func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(u)
 }
 
-// ResetUserPassword handles POST /api/admin/user/reset-password and resets the user password.
+// ResetUserPassword 重置用户密码
+// @Summary 重置用户密码
+// @Description 重置指定用户的密码
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body ResetPasswordRequest true "密码重置请求"
+// @Success 200 {object} map[string]string "重置成功消息"
+// @Failure 400 {string} string "请求参数错误"
+// @Failure 401 {string} string "未授权"
+// @Failure 404 {string} string "用户不存在"
+// @Router /api/admin/user/reset-password [post]
 func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
