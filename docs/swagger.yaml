@@ -1,0 +1,1222 @@
+basePath: /
+definitions:
+  internal_handlers.AddToCartRequest:
+    properties:
+      productId:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  internal_handlers.CreateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      stock:
+        type: integer
+    type: object
+  internal_handlers.DeleteCartItemRequest:
+    properties:
+      itemIds:
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_handlers.HealthResponse:
+    properties:
+      checks:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_handlers.InventoryAdjustRequest:
+    properties:
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+    type: object
+  internal_handlers.RefundRequest:
+    properties:
+      orderId:
+        type: integer
+      reason:
+        type: string
+    type: object
+  internal_handlers.ResetPasswordRequest:
+    properties:
+      userId:
+        type: integer
+    type: object
+  internal_handlers.UpdateCartItemRequest:
+    properties:
+      itemId:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  internal_handlers.UpdateOrderStatusRequest:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+    type: object
+  internal_handlers.UpdateProductRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      status:
+        type: string
+      stock:
+        type: integer
+    type: object
+  internal_handlers.UpdateUserStatusRequest:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+    type: object
+  petshop_internal_models.Cart:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/petshop_internal_models.CartItem'
+        type: array
+      totalItems:
+        description: Total number of items
+        type: integer
+      totalPrice:
+        description: Sum of all item subtotals
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  petshop_internal_models.CartItem:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      price:
+        description: Unit price
+        type: number
+      productId:
+        description: Product ID
+        type: integer
+      productName:
+        description: Product name
+        type: string
+      quantity:
+        description: Quantity of this item
+        type: integer
+      subtotal:
+        description: Calculated subtotal (price * quantity)
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        description: User ID for persistence
+        type: integer
+    type: object
+  petshop_internal_models.CartResponse:
+    properties:
+      cart:
+        $ref: '#/definitions/petshop_internal_models.Cart'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  petshop_internal_models.Category:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  petshop_internal_models.Inventory:
+    properties:
+      afterStock:
+        type: integer
+      beforeStock:
+        type: integer
+      changeType:
+        description: in, out, adjust
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      operator:
+        type: string
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+    type: object
+  petshop_internal_models.InventoryAlert:
+    properties:
+      currentStock:
+        type: integer
+      id:
+        type: integer
+      isRead:
+        type: boolean
+      productId:
+        type: integer
+      productName:
+        type: string
+      threshold:
+        type: integer
+    type: object
+  petshop_internal_models.Order:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/petshop_internal_models.OrderItem'
+        type: array
+      refundReason:
+        type: string
+      status:
+        description: pending, paid, shipped, delivered, cancelled, refunding, refunded
+        type: string
+      totalAmount:
+        type: number
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  petshop_internal_models.OrderItem:
+    properties:
+      price:
+        type: number
+      productId:
+        type: integer
+      productName:
+        type: string
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+    type: object
+  petshop_internal_models.Pet:
+    properties:
+      age:
+        description: Age is the age of the pet in months
+        type: integer
+      ageDisplay:
+        description: AgeDisplay is a human-readable age string (e.g., "2个月", "1岁")
+        type: string
+      breed:
+        description: Breed is the specific breed of the pet
+        type: string
+      createdAt:
+        description: CreatedAt is when the pet was added
+        type: string
+      description:
+        description: Description is a detailed description of the pet
+        type: string
+      healthStatus:
+        description: HealthStatus describes the health condition of the pet
+        type: string
+      id:
+        description: ID is the unique identifier for the pet
+        type: integer
+      name:
+        description: Name is the name of the pet
+        type: string
+      photoUrls:
+        description: PhotoUrls contains a list of photo URLs for the pet
+        items:
+          type: string
+        type: array
+      price:
+        description: Price is the price of the pet in CNY
+        type: number
+      status:
+        description: Status indicates the availability of the pet (e.g., "available",
+          "pending", "sold")
+        type: string
+      type:
+        description: Type is the species or breed of the pet (e.g., "Dog", "Cat")
+        type: string
+      vaccinationRecords:
+        description: VaccinationRecords contains vaccination information
+        items:
+          $ref: '#/definitions/petshop_internal_models.VaccinationRecord'
+        type: array
+    type: object
+  petshop_internal_models.Product:
+    properties:
+      category:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      images:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      status:
+        description: on_sale, off_sale, deleted
+        type: string
+      stock:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  petshop_internal_models.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      role:
+        type: string
+      status:
+        description: active, disabled
+        type: string
+      username:
+        type: string
+    type: object
+  petshop_internal_models.VaccinationRecord:
+    properties:
+      completed:
+        type: boolean
+      date:
+        type: string
+      name:
+        type: string
+    type: object
+  petshop_internal_pagination.Page:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  petshop_internal_pagination.PagedResponse:
+    properties:
+      data: {}
+      pagination:
+        $ref: '#/definitions/petshop_internal_pagination.Page'
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: PetShop RESTful API 文档 - 宠物商店后端服务
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: PetShop API
+  version: "1.0"
+paths:
+  /api/admin/inventory/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Adjust product stock quantity (admin only)
+      parameters:
+      - description: Inventory adjustment
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.InventoryAdjustRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Product'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: product not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Adjust inventory
+      tags:
+      - admin-inventory
+  /api/admin/inventory/alerts:
+    get:
+      consumes:
+      - application/json
+      description: Get products with low stock alerts (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.InventoryAlert'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get inventory alerts
+      tags:
+      - admin-inventory
+  /api/admin/inventory/logs:
+    get:
+      consumes:
+      - application/json
+      description: Get all inventory change logs (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.Inventory'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List inventory logs
+      tags:
+      - admin-inventory
+  /api/admin/order:
+    get:
+      consumes:
+      - application/json
+      description: Get an order by ID (admin only)
+      parameters:
+      - description: Order ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Order'
+        "400":
+          description: id is required
+          schema:
+            type: string
+        "404":
+          description: order not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get order
+      tags:
+      - admin-orders
+    put:
+      consumes:
+      - application/json
+      description: Update the status of an order (admin only)
+      parameters:
+      - description: Order status update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Order'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: order not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update order status
+      tags:
+      - admin-orders
+  /api/admin/order/refund:
+    post:
+      consumes:
+      - application/json
+      description: Process a refund for an order (admin only)
+      parameters:
+      - description: Refund request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.RefundRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: order not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Process refund
+      tags:
+      - admin-orders
+  /api/admin/orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all orders with optional status filter (admin only)
+      parameters:
+      - description: Filter by order status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.Order'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List orders
+      tags:
+      - admin-orders
+  /api/admin/product:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a product by ID (admin only)
+      parameters:
+      - description: Product ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: id is required
+          schema:
+            type: string
+        "404":
+          description: product not found
+          schema:
+            type: string
+        "409":
+          description: product has pending orders
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete product
+      tags:
+      - admin-products
+    get:
+      consumes:
+      - application/json
+      description: Get a product by ID (admin only)
+      parameters:
+      - description: Product ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Product'
+        "400":
+          description: id is required
+          schema:
+            type: string
+        "404":
+          description: product not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get product
+      tags:
+      - admin-products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product (admin only)
+      parameters:
+      - description: Product data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Product'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: product not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update product
+      tags:
+      - admin-products
+  /api/admin/products:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all products (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.Product'
+            type: array
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: List products
+      tags:
+      - admin-products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product (admin only)
+      parameters:
+      - description: Product data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Product'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Create product
+      tags:
+      - admin-products
+  /api/admin/user:
+    get:
+      consumes:
+      - application/json
+      description: Get a user by ID (admin only)
+      parameters:
+      - description: User ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.User'
+        "400":
+          description: id is required
+          schema:
+            type: string
+        "404":
+          description: user not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user
+      tags:
+      - admin-users
+    put:
+      consumes:
+      - application/json
+      description: Update a user's status (admin only)
+      parameters:
+      - description: User status update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.User'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: user not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update user status
+      tags:
+      - admin-users
+  /api/admin/user/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset a user's password (admin only)
+      parameters:
+      - description: Reset password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "404":
+          description: user not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Reset user password
+      tags:
+      - admin-users
+  /api/admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all users (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.User'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - admin-users
+  /api/cart:
+    delete:
+      consumes:
+      - application/json
+      description: Remove items from the user's shopping cart
+      parameters:
+      - description: Delete cart items request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.DeleteCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.CartResponse'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: cart items not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Delete cart items
+      tags:
+      - cart
+    get:
+      consumes:
+      - application/json
+      description: Get the current user's shopping cart
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.CartResponse'
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "500":
+          description: failed to get cart
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get user cart
+      tags:
+      - cart
+    post:
+      consumes:
+      - application/json
+      description: Add a product to the user's shopping cart
+      parameters:
+      - description: Add to cart request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.AddToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/petshop_internal_models.CartResponse'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: product not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Add item to cart
+      tags:
+      - cart
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an item in the user's cart
+      parameters:
+      - description: Update cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.CartResponse'
+        "400":
+          description: invalid request body
+          schema:
+            type: string
+        "401":
+          description: unauthorized
+          schema:
+            type: string
+        "404":
+          description: cart item not found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Update cart item
+      tags:
+      - cart
+  /api/pet:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a pet by its ID
+      parameters:
+      - description: Pet ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Pet'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete pet
+      tags:
+      - pets
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific pet by its ID
+      parameters:
+      - description: Pet ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Pet'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get pet by ID
+      tags:
+      - pets
+    put:
+      consumes:
+      - application/json
+      description: Update an existing pet's information
+      parameters:
+      - description: Pet ID (path parameter)
+        in: query
+        name: id
+        required: true
+        type: integer
+      - description: Pet data
+        in: body
+        name: pet
+        required: true
+        schema:
+          $ref: '#/definitions/petshop_internal_models.Pet'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_models.Pet'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update pet
+      tags:
+      - pets
+  /api/pet/search:
+    get:
+      consumes:
+      - application/json
+      description: Search pets by name with pagination support
+      parameters:
+      - description: Search by pet name
+        in: query
+        name: name
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Page size (default: 10)'
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_pagination.PagedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search pets
+      tags:
+      - pets
+  /api/pets:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of pets with optional type filtering
+      parameters:
+      - description: Filter by pet type
+        in: query
+        name: type
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Page size (default: 10)'
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_pagination.PagedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List pets
+      tags:
+      - pets
+  /api/v1/categories:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all available pet categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/petshop_internal_models.Category'
+            type: array
+      summary: Get pet categories
+      tags:
+      - pets
+  /api/v1/pets:
+    get:
+      consumes:
+      - application/json
+      description: Filter pets by type, status, price range, and search keyword
+      parameters:
+      - description: Filter by pet type
+        in: query
+        name: type
+        type: string
+      - description: Filter by pet status
+        in: query
+        name: status
+        type: string
+      - description: Search by name or breed
+        in: query
+        name: search
+        type: string
+      - description: Minimum price
+        in: query
+        name: minPrice
+        type: number
+      - description: Maximum price
+        in: query
+        name: maxPrice
+        type: number
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Page size (default: 10)'
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/petshop_internal_pagination.PagedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Filter pets
+      tags:
+      - pets
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns the health status of the service including database connectivity
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handlers.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/internal_handlers.HealthResponse'
+      summary: Health check
+      tags:
+      - system
+securityDefinitions:
+  ApiTokenAuth:
+    description: API Token authentication for Open API access
+    in: header
+    name: X-API-Token
+    type: apiKey
+  BearerAuth:
+    description: 'JWT token authentication, format: Bearer <token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

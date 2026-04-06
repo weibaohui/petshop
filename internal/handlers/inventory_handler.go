@@ -19,6 +19,14 @@ type InventoryAdjustRequest struct {
 }
 
 // ListInventoryLogs handles GET /api/admin/inventory/logs and returns all inventory change logs.
+// @Summary List inventory logs
+// @Description Get all inventory change logs (admin only)
+// @Tags admin-inventory
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Inventory
+// @Router /api/admin/inventory/logs [get]
 func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -27,6 +35,14 @@ func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetInventoryAlerts handles GET /api/admin/inventory/alerts and returns products with low stock.
+// @Summary Get inventory alerts
+// @Description Get products with low stock alerts (admin only)
+// @Tags admin-inventory
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.InventoryAlert
+// @Router /api/admin/inventory/alerts [get]
 func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 	dataMu.RLock()
 	defer dataMu.RUnlock()
@@ -46,6 +62,17 @@ func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdjustInventory handles POST /api/admin/inventory/adjust and adjusts product stock quantity.
+// @Summary Adjust inventory
+// @Description Adjust product stock quantity (admin only)
+// @Tags admin-inventory
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body InventoryAdjustRequest true "Inventory adjustment"
+// @Success 200 {object} models.Product
+// @Failure 400 {string} string "invalid request body"
+// @Failure 404 {string} string "product not found"
+// @Router /api/admin/inventory/adjust [post]
 func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {

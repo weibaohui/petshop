@@ -1,3 +1,28 @@
+// @title PetShop API
+// @version 1.0
+// @description PetShop RESTful API 文档 - 宠物商店后端服务
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT token authentication, format: Bearer <token>
+
+// @securityDefinitions.apikey ApiTokenAuth
+// @in header
+// @name X-API-Token
+// @description API Token authentication for Open API access
+
 package main
 
 import (
@@ -16,6 +41,9 @@ import (
 	"petshop/internal/handlers"
 	"petshop/internal/logger"
 	"petshop/internal/middleware"
+
+	_ "petshop/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // serverConfig holds server configuration for testing
@@ -335,6 +363,9 @@ func setupRoutes(mux *http.ServeMux) {
 
 	// Register health check endpoint
 	registerRoute(mux, "/health", handlers.HealthCheck)
+
+	// Swagger UI route
+	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 }
 
 // setupAdminRoutes registers admin API routes
