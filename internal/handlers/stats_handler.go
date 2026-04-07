@@ -19,35 +19,38 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 		period = "day"
 	}
 
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	orders, err := orderRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
 
 	stats := make([]models.SalesStat, 0)
 
 	switch period {
 	case "day":
-		// 最近7天日报
+		// Last 7 days daily report
 		for i := 6; i >= 0; i-- {
 			date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
-			stat := calculateDayStat(date)
+			stat := calculateDayStat(date, orders)
 			stats = append(stats, stat)
 		}
 	case "week":
-		// 最近4周周报
+		// Last 4 weeks weekly report
 		for i := 3; i >= 0; i-- {
 			weekStart := getWeekStart(time.Now().AddDate(0, 0, -i*7))
 			weekEnd := weekStart.AddDate(0, 0, 6)
-			stat := calculatePeriodStat(weekStart, weekEnd)
+			stat := calculatePeriodStat(weekStart, weekEnd, orders)
 			stat.Date = weekStart.Format("2006-01-02")
 			stats = append(stats, stat)
 		}
 	case "month":
-		// 最近6月月报
+		// Last 6 months monthly report
 		for i := 5; i >= 0; i-- {
 			month := time.Now().AddDate(0, -i, 0)
 			monthStart := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.Local)
 			monthEnd := monthStart.AddDate(0, 1, -1)
-			stat := calculatePeriodStat(monthStart, monthEnd)
+			stat := calculatePeriodStat(monthStart, monthEnd, orders)
 			stat.Date = monthStart.Format("2006-01")
 			stats = append(stats, stat)
 		}
@@ -57,7 +60,7 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // calculateDayStat calculates sales statistics for a given date.
-func calculateDayStat(date string) models.SalesStat {
+func calculateDayStat(date string, orders []*models.Order) models.SalesStat {
 	stat := models.SalesStat{Date: date}
 
 	for _, o := range orders {
@@ -73,7 +76,7 @@ func calculateDayStat(date string) models.SalesStat {
 }
 
 // calculatePeriodStat calculates sales statistics for a given date range.
-func calculatePeriodStat(start, end time.Time) models.SalesStat {
+func calculatePeriodStat(start, end time.Time, orders []*models.Order) models.SalesStat {
 	stat := models.SalesStat{Date: start.Format("2006-01-02")}
 
 	for _, o := range orders {
@@ -107,8 +110,11 @@ func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	orders, err := orderRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
 
 	productSales := make(map[int64]struct {
 		name   string
@@ -148,7 +154,7 @@ func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// 排序
+	// Sort by sales count (descending)
 	for i := 0; i < len(hotList)-1; i++ {
 		for j := i + 1; j < len(hotList); j++ {
 			if hotList[j].SalesCount > hotList[i].SalesCount {

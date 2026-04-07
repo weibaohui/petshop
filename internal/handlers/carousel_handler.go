@@ -21,14 +21,12 @@ type CreateCarouselRequest struct {
 
 // ListCarousels handles GET /api/admin/carousels and returns all carousels.
 func ListCarousels(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	carouselList := make([]*models.Carousel, 0, len(carousels))
-	for _, c := range carousels {
-		carouselList = append(carouselList, c)
+	carousels, err := carouselRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(carouselList)
+	json.NewEncoder(w).Encode(carousels)
 }
 
 // CreateCarousel handles POST /api/admin/carousels and creates a new carousel.
@@ -50,19 +48,18 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
 	c := &models.Carousel{
-		ID:        nextCarouselID,
 		ImageURL:  req.ImageURL,
 		LinkURL:   req.LinkURL,
 		SortOrder: req.SortOrder,
 		Title:     req.Title,
 		Status:    "active",
 	}
-	carousels[nextCarouselID] = c
-	nextCarouselID++
+
+	if err := carouselRepo.Create(c); err != nil {
+		http.Error(w, "failed to create carousel", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(c)
@@ -82,27 +79,32 @@ func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if existing, ok := carousels[c.ID]; ok {
-		if c.ImageURL != "" {
-			existing.ImageURL = c.ImageURL
-		}
-		if c.LinkURL != "" {
-			existing.LinkURL = c.LinkURL
-		}
-		existing.SortOrder = c.SortOrder
-		if c.Title != "" {
-			existing.Title = c.Title
-		}
-		if c.Status != "" {
-			existing.Status = c.Status
-		}
-		json.NewEncoder(w).Encode(existing)
+	existing, err := carouselRepo.GetByID(c.ID)
+	if err != nil {
+		http.Error(w, "carousel not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "carousel not found", http.StatusNotFound)
+
+	if c.ImageURL != "" {
+		existing.ImageURL = c.ImageURL
+	}
+	if c.LinkURL != "" {
+		existing.LinkURL = c.LinkURL
+	}
+	existing.SortOrder = c.SortOrder
+	if c.Title != "" {
+		existing.Title = c.Title
+	}
+	if c.Status != "" {
+		existing.Status = c.Status
+	}
+
+	if err := carouselRepo.Update(existing); err != nil {
+		http.Error(w, "failed to update carousel", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(existing)
 }
 
 // DeleteCarousel handles DELETE /api/admin/carousel?id=<id> and deletes the carousel.
@@ -118,14 +120,16 @@ func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if _, ok := carousels[id]; ok {
-		delete(carousels, id)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
+	if _, err := carouselRepo.GetByID(id); err != nil {
+		http.Error(w, "carousel not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "carousel not found", http.StatusNotFound)
+
+	if err := carouselRepo.Delete(id); err != nil {
+		http.Error(w, "failed to delete carousel", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
 }

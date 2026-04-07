@@ -28,14 +28,12 @@ type UpdateAnnouncementRequest struct {
 
 // ListAnnouncements handles GET /api/admin/announcements and returns all announcements.
 func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	announcementList := make([]*models.Announcement, 0, len(announcements))
-	for _, a := range announcements {
-		announcementList = append(announcementList, a)
+	announcements, err := announcementRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(announcementList)
+	json.NewEncoder(w).Encode(announcements)
 }
 
 // CreateAnnouncement handles POST /api/admin/announcements and creates a new announcement.
@@ -58,19 +56,18 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
 	a := &models.Announcement{
-		ID:        nextAnnouncementID,
 		Title:     req.Title,
 		Content:   req.Content,
 		Status:    "active",
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	announcements[nextAnnouncementID] = a
-	nextAnnouncementID++
+
+	if err := announcementRepo.Create(a); err != nil {
+		http.Error(w, "failed to create announcement", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(a)
@@ -90,24 +87,29 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if existing, ok := announcements[req.ID]; ok {
-		if req.Title != nil {
-			existing.Title = *req.Title
-		}
-		if req.Content != nil {
-			existing.Content = *req.Content
-		}
-		if req.Status != nil {
-			existing.Status = *req.Status
-		}
-		existing.UpdatedAt = time.Now()
-		json.NewEncoder(w).Encode(existing)
+	existing, err := announcementRepo.GetByID(req.ID)
+	if err != nil {
+		http.Error(w, "announcement not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "announcement not found", http.StatusNotFound)
+
+	if req.Title != nil {
+		existing.Title = *req.Title
+	}
+	if req.Content != nil {
+		existing.Content = *req.Content
+	}
+	if req.Status != nil {
+		existing.Status = *req.Status
+	}
+	existing.UpdatedAt = time.Now()
+
+	if err := announcementRepo.Update(existing); err != nil {
+		http.Error(w, "failed to update announcement", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(existing)
 }
 
 // DeleteAnnouncement handles DELETE /api/admin/announcement?id=<id> and deletes the announcement.
@@ -123,14 +125,16 @@ func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if _, ok := announcements[id]; ok {
-		delete(announcements, id)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
+	if _, err := announcementRepo.GetByID(id); err != nil {
+		http.Error(w, "announcement not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "announcement not found", http.StatusNotFound)
+
+	if err := announcementRepo.Delete(id); err != nil {
+		http.Error(w, "failed to delete announcement", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
 }

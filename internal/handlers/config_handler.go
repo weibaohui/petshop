@@ -5,11 +5,16 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"petshop/internal/models"
 )
 
 // System configuration functions
+
+// systemConfigs holds system configuration in memory
+var systemConfigs = make(map[string]string)
+var configMu sync.RWMutex
 
 // SetSystemConfigRequest represents the request body for setting a system config.
 type SetSystemConfigRequest struct {
@@ -17,10 +22,18 @@ type SetSystemConfigRequest struct {
 	Value string `json:"value"`
 }
 
+func init() {
+	// Initialize default configs
+	configMu.Lock()
+	systemConfigs["site_name"] = "宠物商店"
+	systemConfigs["inventory_threshold"] = "10"
+	configMu.Unlock()
+}
+
 // GetSystemConfigs handles GET /api/admin/configs and returns all system configurations.
 func GetSystemConfigs(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	configMu.RLock()
+	defer configMu.RUnlock()
 
 	configs := make([]models.SystemConfig, 0, len(systemConfigs))
 	for k, v := range systemConfigs {
@@ -61,15 +74,17 @@ func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
+	configMu.Lock()
+	defer configMu.Unlock()
 
 	systemConfigs[req.Key] = req.Value
 
-	// 更新库存预警阈值
+	// Update inventory alert threshold
 	if req.Key == "inventory_threshold" {
 		v, _ := strconv.Atoi(req.Value)
+		dataMu.Lock()
 		inventoryThreshold = v
+		dataMu.Unlock()
 	}
 
 	w.WriteHeader(http.StatusOK)
