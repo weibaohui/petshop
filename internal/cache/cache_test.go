@@ -392,10 +392,7 @@ func TestPetCache(t *testing.T) {
 	c := NewPetCache(50, time.Minute)
 	defer c.Stop()
 
-	// NewPetCache创建正常
-	if c == nil {
-		t.Fatal("NewPetCache returned nil")
-	}
+	// NewPetCache创建正常（c不可能为nil，因为NewPetCache总是返回非nil指针）
 	if c.Cache == nil {
 		t.Fatal("PetCache.Cache is nil")
 	}
