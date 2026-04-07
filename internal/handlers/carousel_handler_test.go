@@ -294,7 +294,7 @@ func TestUpdateCarousel_Handler(t *testing.T) {
 			},
 		},
 		{
-			name:           "update with empty imageUrl should return error",
+			name:           "update with empty imageUrl should fail validation",
 			requestBody:    `{"id":1,"imageUrl":"","title":"","sortOrder":0}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantErr:        true,

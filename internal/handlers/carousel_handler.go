@@ -14,6 +14,12 @@ import (
 // carouselLogger is the logger for carousel operations
 var carouselLogger = logger.New("carousel_handler")
 
+// Carousel status constants
+const (
+	CarouselStatusActive   = "active"
+	CarouselStatusInactive = "inactive"
+)
+
 // Carousel management functions
 
 // CreateCarouselRequest represents the request body for creating a carousel.
@@ -48,7 +54,7 @@ func isValidURL(str string) bool {
 
 // isValidStatus validates if the given string is a valid carousel status
 func isValidStatus(status string) bool {
-	return status == "active" || status == "inactive"
+	return status == CarouselStatusActive || status == CarouselStatusInactive
 }
 
 // ListCarousels handles GET /api/admin/carousels and returns all carousels.
@@ -130,7 +136,7 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 		LinkURL:   req.LinkURL,
 		SortOrder: req.SortOrder,
 		Title:     req.Title,
-		Status:    "active",
+		Status:    CarouselStatusActive,
 	}
 	carousels[nextCarouselID] = c
 	nextCarouselID++
