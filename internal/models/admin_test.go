@@ -175,8 +175,8 @@ func TestInventoryAlertStruct(t *testing.T) {
 func TestOrderAndOrderItemStruct(t *testing.T) {
 	t.Run("Order JSON serialization and deserialization", func(t *testing.T) {
 		order := Order{
-			ID:       1,
-			UserID:   100,
+			ID:     1,
+			UserID: 100,
 			Products: []OrderItem{
 				{
 					ProductID:   200,

@@ -469,9 +469,9 @@ func TestXSSProtection(t *testing.T) {
 	}))
 
 	tests := []struct {
-		name        string
-		query       string
-		expectCode  int
+		name       string
+		query      string
+		expectCode int
 	}{
 		{"Normal query", "/test?name=test", http.StatusOK},
 		{"Script tag", "/test?name=<script>alert(1)</script>", http.StatusBadRequest},

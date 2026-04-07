@@ -17,7 +17,7 @@ var (
 	announcements = make(map[int64]*models.Announcement)
 	systemConfigs = make(map[string]string)
 
-	dataMu sync.RWMutex
+	dataMu             sync.RWMutex
 	nextProductID      int64 = 1
 	nextOrderID        int64 = 1
 	nextUserID         int64 = 1
@@ -78,8 +78,8 @@ func init() {
 	nextUserID = 3
 
 	orders[1] = &models.Order{
-		ID:      1,
-		UserID:  1,
+		ID:     1,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},

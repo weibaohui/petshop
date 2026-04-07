@@ -11,7 +11,7 @@ import (
 // CacheItem represents a cached item with expiration
 type CacheItem struct {
 	Key        string
-	Value     interface{}
+	Value      interface{}
 	Expiration time.Time
 	Hits       int64
 }

@@ -101,15 +101,15 @@ func TestCreateCarousel_Handler(t *testing.T) {
 	defer resetCarousels()
 
 	tests := []struct {
-		name            string
-		requestBody     string
-		wantStatusCode  int
-		wantErr         bool
-		wantImageURL    string
-		wantLinkURL     string
-		wantSortOrder   int
-		wantTitle       string
-		wantStatus      string
+		name           string
+		requestBody    string
+		wantStatusCode int
+		wantErr        bool
+		wantImageURL   string
+		wantLinkURL    string
+		wantSortOrder  int
+		wantTitle      string
+		wantStatus     string
 	}{
 		{
 			name:           "create carousel with valid data",

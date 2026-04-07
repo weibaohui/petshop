@@ -53,8 +53,8 @@ func resetProductData() {
 
 	orders = make(map[int64]*models.Order)
 	orders[1] = &models.Order{
-		ID:      1,
-		UserID:  1,
+		ID:     1,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},
@@ -62,8 +62,8 @@ func resetProductData() {
 		Status:      "paid",
 	}
 	orders[2] = &models.Order{
-		ID:      2,
-		UserID:  1,
+		ID:     2,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 2, ProductName: "猫粮 5kg", Price: 199.00, Quantity: 1, Subtotal: 199.00},
 		},
@@ -166,7 +166,7 @@ func TestProductHandler_CreateProduct(t *testing.T) {
 	}{
 		{
 			name:              "normal create",
-			body:              `{"name":"测试商品","description":"测试描述","category":"测试","price":99.99,"stock":20,"images":["img1.jpg"]}` ,
+			body:              `{"name":"测试商品","description":"测试描述","category":"测试","price":99.99,"stock":20,"images":["img1.jpg"]}`,
 			wantStatusCode:    http.StatusCreated,
 			wantCreated:       true,
 			wantName:          "测试商品",
@@ -252,19 +252,19 @@ func TestProductHandler_UpdateProduct(t *testing.T) {
 		wantAfterStock   int
 	}{
 		{
-			name:           "normal update",
-			body:           `{"id":1,"name":"更新狗粮","price":349.00,"stock":60,"status":"on_sale"}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "更新狗粮",
-			wantPrice:      349.00,
-			wantStock:      60,
-			wantStatus:     "on_sale",
+			name:             "normal update",
+			body:             `{"id":1,"name":"更新狗粮","price":349.00,"stock":60,"status":"on_sale"}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "更新狗粮",
+			wantPrice:        349.00,
+			wantStock:        60,
+			wantStatus:       "on_sale",
 			wantInventoryLen: 1,
-			checkInventory: true,
-			wantInvType:    "in",
-			wantBeforeStock: 50,
-			wantAfterStock: 60,
+			checkInventory:   true,
+			wantInvType:      "in",
+			wantBeforeStock:  50,
+			wantAfterStock:   60,
 		},
 		{
 			name:           "missing id",
@@ -279,70 +279,70 @@ func TestProductHandler_UpdateProduct(t *testing.T) {
 			wantUpdated:    false,
 		},
 		{
-			name:           "partial update - only name with explicit stock",
-			body:           `{"id":1,"name":"仅改名","stock":50}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "仅改名",
-			wantPrice:      299.00, // unchanged
-			wantStock:      50,     // unchanged because explicitly provided
-			wantStatus:     "on_sale",
+			name:             "partial update - only name with explicit stock",
+			body:             `{"id":1,"name":"仅改名","stock":50}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "仅改名",
+			wantPrice:        299.00, // unchanged
+			wantStock:        50,     // unchanged because explicitly provided
+			wantStatus:       "on_sale",
 			wantInventoryLen: 0,
-			checkInventory: false,
+			checkInventory:   false,
 		},
 		{
-			name:           "partial update - only description with explicit stock",
-			body:           `{"id":1,"description":"新描述","stock":50}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "狗粮 10kg", // unchanged
-			wantPrice:      299.00,       // unchanged
-			wantStock:      50,           // unchanged because explicitly provided
-			wantStatus:     "on_sale",
+			name:             "partial update - only description with explicit stock",
+			body:             `{"id":1,"description":"新描述","stock":50}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "狗粮 10kg", // unchanged
+			wantPrice:        299.00,    // unchanged
+			wantStock:        50,        // unchanged because explicitly provided
+			wantStatus:       "on_sale",
 			wantInventoryLen: 0,
-			checkInventory: false,
+			checkInventory:   false,
 		},
 		{
-			name:           "partial update without stock sets stock to 0",
-			body:           `{"id":1,"name":"仅改名"}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "仅改名",
-			wantPrice:      299.00, // unchanged
-			wantStock:      0,      // stock defaults to 0 when omitted
-			wantStatus:     "on_sale",
+			name:             "partial update without stock sets stock to 0",
+			body:             `{"id":1,"name":"仅改名"}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "仅改名",
+			wantPrice:        299.00, // unchanged
+			wantStock:        0,      // stock defaults to 0 when omitted
+			wantStatus:       "on_sale",
 			wantInventoryLen: 1,
-			checkInventory: true,
-			wantInvType:    "out",
-			wantBeforeStock: 50,
-			wantAfterStock: 0,
+			checkInventory:   true,
+			wantInvType:      "out",
+			wantBeforeStock:  50,
+			wantAfterStock:   0,
 		},
 		{
-			name:           "stock decrease",
-			body:           `{"id":1,"stock":30}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "狗粮 10kg", // unchanged
-			wantPrice:      299.00,       // unchanged
-			wantStock:      30,
-			wantStatus:     "on_sale",
+			name:             "stock decrease",
+			body:             `{"id":1,"stock":30}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "狗粮 10kg", // unchanged
+			wantPrice:        299.00,    // unchanged
+			wantStock:        30,
+			wantStatus:       "on_sale",
 			wantInventoryLen: 1,
-			checkInventory: true,
-			wantInvType:    "out",
-			wantBeforeStock: 50,
-			wantAfterStock: 30,
+			checkInventory:   true,
+			wantInvType:      "out",
+			wantBeforeStock:  50,
+			wantAfterStock:   30,
 		},
 		{
-			name:           "no stock change with explicit current stock",
-			body:           `{"id":1,"status":"off_sale","stock":50}`,
-			wantStatusCode: http.StatusOK,
-			wantUpdated:    true,
-			wantName:       "狗粮 10kg",
-			wantPrice:      299.00,
-			wantStock:      50,
-			wantStatus:     "off_sale",
+			name:             "no stock change with explicit current stock",
+			body:             `{"id":1,"status":"off_sale","stock":50}`,
+			wantStatusCode:   http.StatusOK,
+			wantUpdated:      true,
+			wantName:         "狗粮 10kg",
+			wantPrice:        299.00,
+			wantStock:        50,
+			wantStatus:       "off_sale",
 			wantInventoryLen: 0,
-			checkInventory: false,
+			checkInventory:   false,
 		},
 		{
 			name:           "invalid JSON",
@@ -448,8 +448,8 @@ func TestProductHandler_DeleteProduct(t *testing.T) {
 			setupOrders: func() {
 				dataMu.Lock()
 				orders[10] = &models.Order{
-					ID:      10,
-					UserID:  1,
+					ID:     10,
+					UserID: 1,
 					Products: []models.OrderItem{
 						{ProductID: 2, ProductName: "猫粮 5kg", Price: 199.00, Quantity: 1, Subtotal: 199.00},
 					},

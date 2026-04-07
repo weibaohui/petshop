@@ -19,7 +19,7 @@ type Product struct {
 // Inventory 库存记录
 type Inventory struct {
 	ID          int64     `json:"id"`
-	ProductID   int64      `json:"productId"`
+	ProductID   int64     `json:"productId"`
 	ChangeType  string    `json:"changeType"` // in, out, adjust
 	Quantity    int       `json:"quantity"`
 	BeforeStock int       `json:"beforeStock"`
@@ -31,24 +31,24 @@ type Inventory struct {
 
 // InventoryAlert 库存预警
 type InventoryAlert struct {
-	ID          int64   `json:"id"`
-	ProductID   int64    `json:"productId"`
-	ProductName string   `json:"productName"`
-	Threshold   int      `json:"threshold"`
-	CurrentStock int     `json:"currentStock"`
-	IsRead      bool     `json:"isRead"`
+	ID           int64  `json:"id"`
+	ProductID    int64  `json:"productId"`
+	ProductName  string `json:"productName"`
+	Threshold    int    `json:"threshold"`
+	CurrentStock int    `json:"currentStock"`
+	IsRead       bool   `json:"isRead"`
 }
 
 // Order 订单
 type Order struct {
-	ID           int64         `json:"id"`
-	UserID       int64         `json:"userId"`
-	Products     []OrderItem   `json:"products"`
-	TotalAmount  float64       `json:"totalAmount"`
-	Status       string        `json:"status"` // pending, paid, shipped, delivered, cancelled, refunding, refunded
-	RefundReason string        `json:"refundReason,omitempty"`
-	CreatedAt    time.Time     `json:"createdAt"`
-	UpdatedAt    time.Time     `json:"updatedAt"`
+	ID           int64       `json:"id"`
+	UserID       int64       `json:"userId"`
+	Products     []OrderItem `json:"products"`
+	TotalAmount  float64     `json:"totalAmount"`
+	Status       string      `json:"status"` // pending, paid, shipped, delivered, cancelled, refunding, refunded
+	RefundReason string      `json:"refundReason,omitempty"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	UpdatedAt    time.Time   `json:"updatedAt"`
 }
 
 // OrderItem 订单项
@@ -73,9 +73,9 @@ type User struct {
 
 // SalesStat 销售统计
 type SalesStat struct {
-	Date        string  `json:"date"`
-	TotalSales  float64 `json:"totalSales"`
-	OrderCount  int     `json:"orderCount"`
+	Date       string  `json:"date"`
+	TotalSales float64 `json:"totalSales"`
+	OrderCount int     `json:"orderCount"`
 }
 
 // HotProduct 热销商品
@@ -88,12 +88,12 @@ type HotProduct struct {
 
 // Carousel 轮播图
 type Carousel struct {
-	ID       int64  `json:"id"`
-	ImageURL string `json:"imageUrl"`
-	LinkURL  string `json:"linkUrl"`
-	SortOrder int   `json:"sortOrder"`
-	Title    string `json:"title"`
-	Status   string `json:"status"` // active, inactive
+	ID        int64  `json:"id"`
+	ImageURL  string `json:"imageUrl"`
+	LinkURL   string `json:"linkUrl"`
+	SortOrder int    `json:"sortOrder"`
+	Title     string `json:"title"`
+	Status    string `json:"status"` // active, inactive
 }
 
 // Announcement 公告

@@ -85,12 +85,12 @@ func TestPaginate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		items          []interface{}
-		page           int
-		pageSize       int
-		expectedPage   *Page
-		expectedItems  []interface{}
+		name          string
+		items         []interface{}
+		page          int
+		pageSize      int
+		expectedPage  *Page
+		expectedItems []interface{}
 	}{
 		{
 			name:          "空切片返回空结果与正确Page元数据",

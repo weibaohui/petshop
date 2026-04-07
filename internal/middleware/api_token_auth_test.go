@@ -338,58 +338,58 @@ func TestGetAPIToken(t *testing.T) {
 
 func TestHasPermission(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		permissions string
-		checkPerm  string
-		expected   bool
+		checkPerm   string
+		expected    bool
 	}{
 		{
-			name:       "has read permission",
+			name:        "has read permission",
 			permissions: "read",
-			checkPerm:  "read",
-			expected:   true,
+			checkPerm:   "read",
+			expected:    true,
 		},
 		{
-			name:       "has write permission in list",
+			name:        "has write permission in list",
 			permissions: "read,write,delete",
-			checkPerm:  "write",
-			expected:   true,
+			checkPerm:   "write",
+			expected:    true,
 		},
 		{
-			name:       "admin permission allows all",
+			name:        "admin permission allows all",
 			permissions: "admin",
-			checkPerm:  "delete",
-			expected:   true,
+			checkPerm:   "delete",
+			expected:    true,
 		},
 		{
-			name:       "admin in list allows all",
+			name:        "admin in list allows all",
 			permissions: "read,admin",
-			checkPerm:  "write",
-			expected:   true,
+			checkPerm:   "write",
+			expected:    true,
 		},
 		{
-			name:       "missing permission",
+			name:        "missing permission",
 			permissions: "read",
-			checkPerm:  "write",
-			expected:   false,
+			checkPerm:   "write",
+			expected:    false,
 		},
 		{
-			name:       "empty permissions defaults to read only",
+			name:        "empty permissions defaults to read only",
 			permissions: "",
-			checkPerm:  "read",
-			expected:   true,
+			checkPerm:   "read",
+			expected:    true,
 		},
 		{
-			name:       "empty permissions deny write",
+			name:        "empty permissions deny write",
 			permissions: "",
-			checkPerm:  "write",
-			expected:   false,
+			checkPerm:   "write",
+			expected:    false,
 		},
 		{
-			name:       "permissions with spaces",
+			name:        "permissions with spaces",
 			permissions: "read, write , delete",
-			checkPerm:  "write",
-			expected:   true,
+			checkPerm:   "write",
+			expected:    true,
 		},
 	}
 

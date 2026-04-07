@@ -234,8 +234,8 @@ func TestGetInventoryAlertsExtended(t *testing.T) {
 		{
 			name: "multiple alerts for low stock",
 			setupProducts: func() {
-				products[1].Stock = 5  // 低于阈值 10
-				products[2].Stock = 8  // 低于阈值 10
+				products[1].Stock = 5 // 低于阈值 10
+				products[2].Stock = 8 // 低于阈值 10
 			},
 			threshold:      10,
 			wantStatusCode: http.StatusOK,

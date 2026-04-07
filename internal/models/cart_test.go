@@ -60,8 +60,8 @@ func TestCartItemStruct(t *testing.T) {
 func TestCartStruct(t *testing.T) {
 	t.Run("Cart JSON serialization and deserialization", func(t *testing.T) {
 		cart := Cart{
-			UserID:     100,
-			Items:      []CartItem{
+			UserID: 100,
+			Items: []CartItem{
 				{
 					ID:          1,
 					UserID:      100,

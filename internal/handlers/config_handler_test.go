@@ -41,8 +41,8 @@ func TestGetSystemConfigs_Handler(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			wantLen:        2,
 			wantContains: map[string]string{
-				"site_name":             "宠物商店",
-				"inventory_threshold":   "10",
+				"site_name":           "宠物商店",
+				"inventory_threshold": "10",
 			},
 		},
 		{
@@ -108,12 +108,12 @@ func TestSetSystemConfig_Handler(t *testing.T) {
 	defer resetSystemConfigs()
 
 	tests := []struct {
-		name               string
-		requestBody        string
-		wantStatusCode     int
-		wantErr            bool
-		wantMessage        string
-		checkConfigValue   map[string]string
+		name                    string
+		requestBody             string
+		wantStatusCode          int
+		wantErr                 bool
+		wantMessage             string
+		checkConfigValue        map[string]string
 		checkInventoryThreshold *int
 	}{
 		{

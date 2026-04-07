@@ -57,12 +57,12 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(wrapper, r)
 
 		logger.Access("http request", map[string]interface{}{
-			"method":     r.Method,
-			"path":       r.URL.Path,
-			"status":     wrapper.statusCode,
-			"duration":   time.Since(start).String(),
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status":      wrapper.statusCode,
+			"duration":    time.Since(start).String(),
 			"remote_addr": r.RemoteAddr,
-			"user_agent": r.UserAgent(),
+			"user_agent":  r.UserAgent(),
 		})
 	})
 }

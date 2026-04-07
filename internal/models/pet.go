@@ -59,13 +59,13 @@ type VaccinationRecord struct {
 
 // PetFilter represents filter options for pet search
 type PetFilter struct {
-	Type       string  `json:"type"`
-	MinPrice   float64 `json:"minPrice"`
-	MaxPrice   float64 `json:"maxPrice"`
-	Search     string  `json:"search"`
-	Status     string  `json:"status"`
-	Page       int     `json:"page"`
-	PageSize   int     `json:"pageSize"`
+	Type     string  `json:"type"`
+	MinPrice float64 `json:"minPrice"`
+	MaxPrice float64 `json:"maxPrice"`
+	Search   string  `json:"search"`
+	Status   string  `json:"status"`
+	Page     int     `json:"page"`
+	PageSize int     `json:"pageSize"`
 }
 
 // Categories returns all available pet categories

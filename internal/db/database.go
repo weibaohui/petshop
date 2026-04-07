@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	db      *sql.DB
-	dbMu    sync.Mutex
+	db       *sql.DB
+	dbMu     sync.Mutex
 	dbInited bool
-	dbErr   error
+	dbErr    error
 )
 
 // InitDB initializes the database connection

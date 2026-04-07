@@ -50,8 +50,8 @@ func resetStatsData() {
 
 	// 今天的订单
 	orders[1] = &models.Order{
-		ID:      1,
-		UserID:  1,
+		ID:     1,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 2, Subtotal: 598.00},
 		},
@@ -62,8 +62,8 @@ func resetStatsData() {
 
 	// 昨天的订单
 	orders[2] = &models.Order{
-		ID:      2,
-		UserID:  2,
+		ID:     2,
+		UserID: 2,
 		Products: []models.OrderItem{
 			{ProductID: 2, ProductName: "猫粮 5kg", Price: 199.00, Quantity: 1, Subtotal: 199.00},
 		},
@@ -74,8 +74,8 @@ func resetStatsData() {
 
 	// 3天前的订单
 	orders[3] = &models.Order{
-		ID:      3,
-		UserID:  1,
+		ID:     3,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 			{ProductID: 2, ProductName: "猫粮 5kg", Price: 199.00, Quantity: 2, Subtotal: 398.00},
@@ -87,8 +87,8 @@ func resetStatsData() {
 
 	// 取消的订单（不应该被统计）
 	orders[4] = &models.Order{
-		ID:      4,
-		UserID:  1,
+		ID:     4,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},
@@ -99,8 +99,8 @@ func resetStatsData() {
 
 	// 退款订单（不应该被统计）
 	orders[5] = &models.Order{
-		ID:      5,
-		UserID:  2,
+		ID:     5,
+		UserID: 2,
 		Products: []models.OrderItem{
 			{ProductID: 2, ProductName: "猫粮 5kg", Price: 199.00, Quantity: 1, Subtotal: 199.00},
 		},
@@ -277,11 +277,11 @@ func TestStatsHandler_GetHotProducts_DefaultLimit(t *testing.T) {
 	require.NotNil(t, catFood)
 
 	assert.Equal(t, "狗粮 10kg", dogFood.ProductName)
-	assert.Equal(t, 3, dogFood.SalesCount)  // 2 + 1
+	assert.Equal(t, 3, dogFood.SalesCount)               // 2 + 1
 	assert.InDelta(t, 897.00, dogFood.SalesAmount, 0.01) // 598 + 299
 
 	assert.Equal(t, "猫粮 5kg", catFood.ProductName)
-	assert.Equal(t, 3, catFood.SalesCount)  // 1 + 2
+	assert.Equal(t, 3, catFood.SalesCount)               // 1 + 2
 	assert.InDelta(t, 597.00, catFood.SalesAmount, 0.01) // 199 + 398
 }
 
@@ -362,10 +362,10 @@ func TestStatsHandler_CalculateDayStat(t *testing.T) {
 	resetStatsData()
 
 	tests := []struct {
-		name         string
-		date         string
-		wantOrders   int
-		wantSales    float64
+		name       string
+		date       string
+		wantOrders int
+		wantSales  float64
 	}{
 		{
 			name:       "today with orders",
@@ -435,7 +435,7 @@ func TestStatsHandler_CalculatePeriodStat(t *testing.T) {
 			name:       "3 days period",
 			start:      today.AddDate(0, 0, -3),
 			end:        today,
-			wantOrders: 3, // 订单1, 2, 3
+			wantOrders: 3,       // 订单1, 2, 3
 			wantSales:  1494.00, // 598 + 199 + 697
 		},
 		{
@@ -509,8 +509,8 @@ func TestStatsHandler_GetHotProducts_ExcludedStatuses(t *testing.T) {
 
 	// 添加一个正常订单
 	orders[1] = &models.Order{
-		ID:      1,
-		UserID:  1,
+		ID:     1,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},
@@ -521,8 +521,8 @@ func TestStatsHandler_GetHotProducts_ExcludedStatuses(t *testing.T) {
 
 	// 添加一个被取消的订单，包含不同商品
 	orders[2] = &models.Order{
-		ID:      2,
-		UserID:  1,
+		ID:     2,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 99, ProductName: "被取消商品", Price: 999.00, Quantity: 100, Subtotal: 99900.00},
 		},
@@ -533,8 +533,8 @@ func TestStatsHandler_GetHotProducts_ExcludedStatuses(t *testing.T) {
 
 	// 添加一个退款订单
 	orders[3] = &models.Order{
-		ID:      3,
-		UserID:  1,
+		ID:     3,
+		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 88, ProductName: "退款商品", Price: 888.00, Quantity: 50, Subtotal: 44400.00},
 		},

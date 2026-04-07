@@ -42,24 +42,24 @@ import (
 	"petshop/internal/logger"
 	"petshop/internal/middleware"
 
-	_ "petshop/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
+	_ "petshop/docs"
 )
 
 // serverConfig holds server configuration for testing
 type serverConfig struct {
-	addr       string
-	logDir     string
-	dbPath     string
+	addr            string
+	logDir          string
+	dbPath          string
 	shutdownTimeout time.Duration
 }
 
 // defaultConfig returns default server configuration
 func defaultConfig() *serverConfig {
 	return &serverConfig{
-		addr:       ":8080",
-		logDir:     "logs",
-		dbPath:     "./cart.db",
+		addr:            ":8080",
+		logDir:          "logs",
+		dbPath:          "./cart.db",
 		shutdownTimeout: 10 * time.Second,
 	}
 }
@@ -88,7 +88,7 @@ func runWithConfig(config *serverConfig) error {
 
 // serverDependencies holds injectable dependencies for testing the server
 type serverDependencies struct {
-	signalChan     <-chan os.Signal
+	signalChan         <-chan os.Signal
 	serverErrorHandler func(error)
 }
 
@@ -520,4 +520,3 @@ func setupConfigRoutes(mux *http.ServeMux) {
 	registerAuthRoute(mux, "/api/admin/configs", http.MethodGet, handlers.GetSystemConfigs)
 	registerAuthRoute(mux, "/api/admin/config", http.MethodPost, handlers.SetSystemConfig)
 }
-
