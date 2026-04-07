@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"time"
 
 	"petshop/internal/models"
@@ -23,10 +23,21 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
+// ensureDB checks if the repository and database are initialized
+func (r *OrderRepository) ensureDB() error {
+	if r == nil {
+		return errors.New("order repository is not initialized")
+	}
+	if r.db == nil {
+		return errors.New("order repository database is not initialized")
+	}
+	return nil
+}
+
 // GetAll returns all orders
 func (r *OrderRepository) GetAll() ([]*models.Order, error) {
-	if r.db == nil {
-		return nil, fmt.Errorf("database connection is nil")
+	if err := r.ensureDB(); err != nil {
+		return nil, err
 	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
@@ -41,6 +52,9 @@ func (r *OrderRepository) GetAll() ([]*models.Order, error) {
 
 // GetByID returns an order by ID with its items
 func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	o := &models.Order{}
 
 	err := r.db.QueryRow(`
@@ -63,6 +77,9 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 
 // GetByStatus returns orders filtered by status
 func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders WHERE status = ? ORDER BY id DESC`, status)
@@ -76,6 +93,9 @@ func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 
 // Create creates a new order with items in a transaction
 func (r *OrderRepository) Create(o *models.Order) error {
+	if err := r.ensureDB(); err != nil {
+		return err
+	}
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -114,6 +134,9 @@ func (r *OrderRepository) Create(o *models.Order) error {
 
 // UpdateStatus updates order status
 func (r *OrderRepository) UpdateStatus(id int64, status string) error {
+	if err := r.ensureDB(); err != nil {
+		return err
+	}
 	_, err := r.db.Exec(`
 		UPDATE orders SET status = ?, updated_at = ? WHERE id = ?`,
 		status, time.Now(), id)
@@ -122,6 +145,9 @@ func (r *OrderRepository) UpdateStatus(id int64, status string) error {
 
 // UpdateRefund updates order refund status and reason
 func (r *OrderRepository) UpdateRefund(id int64, reason string) error {
+	if err := r.ensureDB(); err != nil {
+		return err
+	}
 	_, err := r.db.Exec(`
 		UPDATE orders SET status = 'refunded', refund_reason = ?, updated_at = ? WHERE id = ?`,
 		reason, time.Now(), id)
@@ -130,6 +156,9 @@ func (r *OrderRepository) UpdateRefund(id int64, reason string) error {
 
 // HasPendingOrdersByProduct checks if a product has pending orders
 func (r *OrderRepository) HasPendingOrdersByProduct(productID int64) (bool, error) {
+	if err := r.ensureDB(); err != nil {
+		return false, err
+	}
 	var count int
 	err := r.db.QueryRow(`
 		SELECT COUNT(*) FROM order_items oi
@@ -144,6 +173,9 @@ func (r *OrderRepository) HasPendingOrdersByProduct(productID int64) (bool, erro
 
 // GetOrderItemsByProduct returns order items for a product
 func (r *OrderRepository) GetOrderItemsByProduct(productID int64) ([]models.OrderItem, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.Query(`
 		SELECT product_id, product_name, price, quantity, subtotal
 		FROM order_items WHERE product_id = ?`, productID)
