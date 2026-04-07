@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"petshop/internal/models"
 )
 
 // ValidationError represents a validation error
@@ -64,7 +66,11 @@ func ValidatePet(name, petType, status string) ValidationErrors {
 		errors = append(errors, ValidationError{Field: "type", Message: "type is required"})
 	}
 
-	validStatuses := map[string]bool{"available": true, "pending": true, "sold": true}
+	validStatuses := map[string]bool{
+		string(models.StatusAvailable): true,
+		string(models.StatusPending):   true,
+		string(models.StatusSold):      true,
+	}
 	if status != "" && !validStatuses[strings.ToLower(status)] {
 		errors = append(errors, ValidationError{Field: "status", Message: "status must be one of: available, pending, sold"})
 	}
