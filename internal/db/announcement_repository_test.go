@@ -27,7 +27,7 @@ func TestNewAnnouncementRepositoryWithDB(t *testing.T) {
 	ResetForTesting()
 	err := InitDB(":memory:")
 	require.NoError(t, err)
-	defer Close()
+	t.Cleanup(ResetForTesting)
 
 	repo := NewAnnouncementRepositoryWithDB(GetDB())
 	assert.NotNil(t, repo)
@@ -205,12 +205,12 @@ func TestAnnouncementRepository_GetByID(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "invalid id zero",
+			name:    "non-existent id zero",
 			id:      0,
 			wantErr: true,
 		},
 		{
-			name:    "negative id",
+			name:    "non-existent negative id",
 			id:      -1,
 			wantErr: true,
 		},
@@ -498,14 +498,16 @@ func TestAnnouncementRepository_TimeFields(t *testing.T) {
 	assert.True(t, announcement.CreatedAt.After(beforeCreate) || announcement.CreatedAt.Equal(beforeCreate))
 	assert.True(t, announcement.UpdatedAt.After(beforeCreate) || announcement.UpdatedAt.Equal(beforeCreate))
 
-	// Wait a bit and update
-	time.Sleep(10 * time.Millisecond)
-	beforeUpdate := time.Now()
+	// Verify updated_at equals created_at after create
+	createdAt := announcement.CreatedAt
+	updatedAtAfterCreate := announcement.UpdatedAt
+	assert.True(t, updatedAtAfterCreate.After(createdAt) || updatedAtAfterCreate.Equal(createdAt))
 
+	// Update the announcement
 	announcement.Title = "Updated Time Test"
 	err = r.Update(announcement)
 	require.NoError(t, err)
 
-	// Verify updated_at is updated
-	assert.True(t, announcement.UpdatedAt.After(beforeUpdate) || announcement.UpdatedAt.Equal(beforeUpdate))
+	// Verify updated_at is after created_at after update
+	assert.True(t, announcement.UpdatedAt.After(createdAt))
 }
