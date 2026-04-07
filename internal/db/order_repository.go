@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"petshop/internal/models"
@@ -24,6 +25,9 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 
 // GetAll returns all orders
 func (r *OrderRepository) GetAll() ([]*models.Order, error) {
+	if r.db == nil {
+		return nil, fmt.Errorf("database connection is nil")
+	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders ORDER BY id DESC`)

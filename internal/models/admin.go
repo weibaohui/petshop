@@ -46,7 +46,7 @@ type Order struct {
 	Products     []OrderItem `json:"products"`
 	TotalAmount  float64     `json:"totalAmount"`
 	Status       string      `json:"status"` // pending, paid, shipped, delivered, cancelled, refunding, refunded
-	RefundReason string      `json:"refundReason,omitempty"`
+	RefundReason *string     `json:"refundReason,omitempty"`
 	CreatedAt    time.Time   `json:"createdAt"`
 	UpdatedAt    time.Time   `json:"updatedAt"`
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -114,7 +115,7 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		changeType = "out"
 	}
 
-	inventoryRepo.Create(&models.Inventory{
+	if err := inventoryRepo.Create(&models.Inventory{
 		ProductID:   p.ID,
 		ChangeType:  changeType,
 		Quantity:    abs(req.Quantity),
@@ -123,7 +124,10 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		Reason:      req.Reason,
 		Operator:    "admin",
 		CreatedAt:   time.Now(),
-	})
+	}); err != nil {
+		// Log inventory record failure but don't fail the request
+		fmt.Printf("Failed to record inventory log: %v\n", err)
+	}
 
 	json.NewEncoder(w).Encode(p)
 }

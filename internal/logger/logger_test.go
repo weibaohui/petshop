@@ -78,7 +78,9 @@ func TestLoggerLog(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	if !strings.Contains(output, "INFO") {
@@ -121,7 +123,7 @@ func TestLoggerMethods(t *testing.T) {
 			os.Stdout = oldStdout
 
 			var buf bytes.Buffer
-			io.Copy(&buf, r)
+			_, _ = io.Copy(&buf, r)
 			output := buf.String()
 
 			expectedLevel := tt.level.String()
@@ -148,7 +150,9 @@ func TestLoggerWithNilFields(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	if !strings.Contains(output, "nil fields message") {
@@ -169,7 +173,9 @@ func TestLoggerWithEmptyFields(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	if !strings.Contains(output, "empty fields message") {
@@ -231,7 +237,9 @@ func TestInitWithEmptyDir(t *testing.T) {
 func TestClose(t *testing.T) {
 	// Ensure Init was called first
 	tempDir := t.TempDir()
-	Init(tempDir)
+	if initErr := Init(tempDir); initErr != nil {
+		t.Fatalf("Failed to initialize logger: %v", initErr)
+	}
 
 	// Write something to ensure file is open
 	if globalLogger != nil {
@@ -281,7 +289,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 			os.Stdout = oldStdout
 
 			var buf bytes.Buffer
-			io.Copy(&buf, r)
+			_, _ = io.Copy(&buf, r)
 			output := buf.String()
 
 			if !strings.Contains(output, tt.name+" message") {
@@ -342,7 +350,9 @@ func TestConcurrency(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	// Verify output contains expected number of messages
@@ -443,7 +453,9 @@ func TestLogFileContent(t *testing.T) {
 
 	// Write test content
 	testContent := "[2024-01-01 12:00:00.000] [INFO] [filetest] file test message map[foo:bar]\n"
-	f.WriteString(testContent)
+	if _, writeErr := f.WriteString(testContent); writeErr != nil {
+		t.Fatalf("Failed to write test content: %v", writeErr)
+	}
 
 	// Verify the file content
 	content, err := os.ReadFile(logFilePath)
@@ -495,7 +507,9 @@ func TestMultipleLoggers(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	if !strings.Contains(output, "module1") {
@@ -546,7 +560,9 @@ func TestLargeFields(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	if !strings.Contains(output, "large field test") {
@@ -572,7 +588,9 @@ func TestSpecialCharacters(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	// Just verify it doesn't panic and contains the message
@@ -602,7 +620,9 @@ func TestAccessFunction(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Errorf("Failed to copy output: %v", copyErr)
+	}
 	output := buf.String()
 
 	// Access() uses Info level internally
