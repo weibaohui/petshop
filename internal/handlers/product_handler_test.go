@@ -435,9 +435,8 @@ func TestProductHandler_DeleteProduct(t *testing.T) {
 			name: "product in delivered order only",
 			url:  "/api/admin/product?id=2",
 			setupOrders: func() {
-				dataMu.Lock()
 				// Ensure order 2 has product 2 with delivered status (already in resetProductData)
-				dataMu.Unlock()
+				// 不需要锁操作，数据已经在resetProductData中设置好
 			},
 			wantStatusCode: http.StatusOK,
 			wantDeleted:    true,
