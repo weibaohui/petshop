@@ -20,16 +20,16 @@ func resetCarousels() {
 	carousels = make(map[int64]*models.Carousel)
 	carousels[1] = &models.Carousel{
 		ID:        1,
-		ImageURL:  "/static/carousel/banner1.jpg",
-		LinkURL:   "/product/1",
+		ImageURL:  "https://example.com/static/carousel/banner1.jpg",
+		LinkURL:   "https://example.com/product/1",
 		SortOrder: 1,
 		Title:     "春季大促",
 		Status:    "active",
 	}
 	carousels[2] = &models.Carousel{
 		ID:        2,
-		ImageURL:  "/static/carousel/banner2.jpg",
-		LinkURL:   "/product/2",
+		ImageURL:  "https://example.com/static/carousel/banner2.jpg",
+		LinkURL:   "https://example.com/product/2",
 		SortOrder: 2,
 		Title:     "夏季促销",
 		Status:    "inactive",
@@ -113,21 +113,21 @@ func TestCreateCarousel_Handler(t *testing.T) {
 	}{
 		{
 			name:           "create carousel with valid data",
-			requestBody:    `{"imageUrl":"/static/banner3.jpg","linkUrl":"/product/3","sortOrder":3,"title":"秋季活动"}`,
+			requestBody:    `{"imageUrl":"https://example.com/static/banner3.jpg","linkUrl":"https://example.com/product/3","sortOrder":3,"title":"秋季活动"}`,
 			wantStatusCode: http.StatusCreated,
 			wantErr:        false,
-			wantImageURL:   "/static/banner3.jpg",
-			wantLinkURL:    "/product/3",
+			wantImageURL:   "https://example.com/static/banner3.jpg",
+			wantLinkURL:    "https://example.com/product/3",
 			wantSortOrder:  3,
 			wantTitle:      "秋季活动",
 			wantStatus:     "active",
 		},
 		{
 			name:           "create carousel with minimal data",
-			requestBody:    `{"imageUrl":"/static/banner4.jpg"}`,
+			requestBody:    `{"imageUrl":"https://example.com/static/banner4.jpg"}`,
 			wantStatusCode: http.StatusCreated,
 			wantErr:        false,
-			wantImageURL:   "/static/banner4.jpg",
+			wantImageURL:   "https://example.com/static/banner4.jpg",
 			wantLinkURL:    "",
 			wantSortOrder:  0,
 			wantTitle:      "",
@@ -165,21 +165,30 @@ func TestCreateCarousel_Handler(t *testing.T) {
 		},
 		{
 			name:           "create with negative sortOrder",
-			requestBody:    `{"imageUrl":"/static/banner5.jpg","sortOrder":-1}`,
-			wantStatusCode: http.StatusCreated,
-			wantErr:        false,
-			wantImageURL:   "/static/banner5.jpg",
-			wantSortOrder:  -1,
-			wantStatus:     "active",
+			requestBody:    `{"imageUrl":"https://example.com/static/banner5.jpg","sortOrder":-1}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 		{
 			name:           "create with large sortOrder",
-			requestBody:    `{"imageUrl":"/static/banner6.jpg","sortOrder":999999}`,
+			requestBody:    `{"imageUrl":"https://example.com/static/banner6.jpg","sortOrder":999999}`,
 			wantStatusCode: http.StatusCreated,
 			wantErr:        false,
-			wantImageURL:   "/static/banner6.jpg",
+			wantImageURL:   "https://example.com/static/banner6.jpg",
 			wantSortOrder:  999999,
 			wantStatus:     "active",
+		},
+		{
+			name:           "create with invalid imageUrl format",
+			requestBody:    `{"imageUrl":"/static/banner7.jpg"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "create with invalid linkUrl format",
+			requestBody:    `{"imageUrl":"https://example.com/static/banner8.jpg","linkUrl":"/invalid/link"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 	}
 
@@ -232,25 +241,25 @@ func TestUpdateCarousel_Handler(t *testing.T) {
 			wantErr:        false,
 			checkResponse: func(t *testing.T, carousel *models.Carousel) {
 				assert.Equal(t, "更新后的标题", carousel.Title)
-				assert.Equal(t, "/static/carousel/banner1.jpg", carousel.ImageURL) // unchanged
+				assert.Equal(t, "https://example.com/static/carousel/banner1.jpg", carousel.ImageURL) // unchanged
 			},
 		},
 		{
 			name:           "update existing carousel imageUrl",
-			requestBody:    `{"id":1,"imageUrl":"/static/new.jpg"}`,
+			requestBody:    `{"id":1,"imageUrl":"https://example.com/static/new.jpg"}`,
 			wantStatusCode: http.StatusOK,
 			wantErr:        false,
 			checkResponse: func(t *testing.T, carousel *models.Carousel) {
-				assert.Equal(t, "/static/new.jpg", carousel.ImageURL)
+				assert.Equal(t, "https://example.com/static/new.jpg", carousel.ImageURL)
 			},
 		},
 		{
 			name:           "update existing carousel linkUrl",
-			requestBody:    `{"id":1,"linkUrl":"/new/link"}`,
+			requestBody:    `{"id":1,"linkUrl":"https://example.com/new/link"}`,
 			wantStatusCode: http.StatusOK,
 			wantErr:        false,
 			checkResponse: func(t *testing.T, carousel *models.Carousel) {
-				assert.Equal(t, "/new/link", carousel.LinkURL)
+				assert.Equal(t, "https://example.com/new/link", carousel.LinkURL)
 			},
 		},
 		{
@@ -273,12 +282,12 @@ func TestUpdateCarousel_Handler(t *testing.T) {
 		},
 		{
 			name:           "update all fields",
-			requestBody:    `{"id":1,"imageUrl":"/all/new.jpg","linkUrl":"/all/link","sortOrder":99,"title":"All New","status":"inactive"}`,
+			requestBody:    `{"id":1,"imageUrl":"https://example.com/all/new.jpg","linkUrl":"https://example.com/all/link","sortOrder":99,"title":"All New","status":"inactive"}`,
 			wantStatusCode: http.StatusOK,
 			wantErr:        false,
 			checkResponse: func(t *testing.T, carousel *models.Carousel) {
-				assert.Equal(t, "/all/new.jpg", carousel.ImageURL)
-				assert.Equal(t, "/all/link", carousel.LinkURL)
+				assert.Equal(t, "https://example.com/all/new.jpg", carousel.ImageURL)
+				assert.Equal(t, "https://example.com/all/link", carousel.LinkURL)
 				assert.Equal(t, 99, carousel.SortOrder)
 				assert.Equal(t, "All New", carousel.Title)
 				assert.Equal(t, "inactive", carousel.Status)
@@ -287,14 +296,32 @@ func TestUpdateCarousel_Handler(t *testing.T) {
 		{
 			name:           "update with zero values should keep existing",
 			requestBody:    `{"id":1,"imageUrl":"","title":"","sortOrder":0}`,
-			wantStatusCode: http.StatusOK,
-			wantErr:        false,
-			checkResponse: func(t *testing.T, carousel *models.Carousel) {
-				// Empty strings should not override, but sortOrder 0 should be applied
-				assert.Equal(t, "/static/carousel/banner1.jpg", carousel.ImageURL)
-				assert.Equal(t, "春季大促", carousel.Title)
-				assert.Equal(t, 0, carousel.SortOrder)
-			},
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "update with negative sortOrder",
+			requestBody:    `{"id":1,"sortOrder":-5}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "update with invalid status",
+			requestBody:    `{"id":1,"status":"invalid"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "update with invalid imageUrl",
+			requestBody:    `{"id":1,"imageUrl":"/invalid/path.jpg"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
+		},
+		{
+			name:           "update with invalid linkUrl",
+			requestBody:    `{"id":1,"linkUrl":"/invalid/link"}`,
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 		{
 			name:           "update non-existent carousel",
@@ -491,8 +518,8 @@ func TestCreateCarouselRequest_Validation(t *testing.T) {
 		{
 			name: "valid request",
 			req: CreateCarouselRequest{
-				ImageURL:  "/test.jpg",
-				LinkURL:   "/link",
+				ImageURL:  "https://example.com/test.jpg",
+				LinkURL:   "https://example.com/link",
 				SortOrder: 1,
 				Title:     "Test",
 			},
@@ -506,17 +533,25 @@ func TestCreateCarouselRequest_Validation(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid imageUrl format",
+			req: CreateCarouselRequest{
+				ImageURL: "/test.jpg",
+				Title:    "Invalid URL",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// This is a struct validation test
 			// The actual validation happens in the handler
-			hasImage := tt.req.ImageURL != ""
+			isValid := tt.req.ImageURL != "" && isValidURL(tt.req.ImageURL)
 			if tt.wantErr {
-				assert.False(t, hasImage, "expected validation to fail")
+				assert.False(t, isValid, "expected validation to fail")
 			} else {
-				assert.True(t, hasImage, "expected validation to pass")
+				assert.True(t, isValid, "expected validation to pass")
 			}
 		})
 	}

@@ -82,8 +82,8 @@ func resetAdminData() {
 	carousels = make(map[int64]*models.Carousel)
 	carousels[1] = &models.Carousel{
 		ID:        1,
-		ImageURL:  "/static/carousel/banner1.jpg",
-		LinkURL:   "/product/1",
+		ImageURL:  "https://example.com/static/carousel/banner1.jpg",
+		LinkURL:   "https://example.com/product/1",
 		SortOrder: 1,
 		Title:     "春季大促",
 		Status:    "active",
@@ -1049,13 +1049,13 @@ func TestCreateCarousel(t *testing.T) {
 	}{
 		{
 			name:           "create carousel with valid data",
-			requestBody:    `{"imageUrl":"/static/banner2.jpg","linkUrl":"/product/2","sortOrder":2,"title":"夏季促销"}`,
+			requestBody:    `{"imageUrl":"https://example.com/static/banner2.jpg","linkUrl":"https://example.com/product/2","sortOrder":2,"title":"夏季促销"}`,
 			wantStatusCode: http.StatusCreated,
 			wantErr:        false,
 		},
 		{
 			name:           "missing imageUrl",
-			requestBody:    `{"linkUrl":"/product/2","sortOrder":2,"title":"夏季促销"}`,
+			requestBody:    `{"linkUrl":"https://example.com/product/2","sortOrder":2,"title":"夏季促销"}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantErr:        true,
 		},
