@@ -28,10 +28,12 @@ type InventoryAdjustRequest struct {
 // @Success 200 {array} models.Inventory
 // @Router /api/admin/inventory/logs [get]
 func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	json.NewEncoder(w).Encode(inventoryLogs)
+	logs, err := inventoryRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(logs)
 }
 
 // GetInventoryAlerts handles GET /api/admin/inventory/alerts and returns products with low stock.
@@ -44,19 +46,20 @@ func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} models.InventoryAlert
 // @Router /api/admin/inventory/alerts [get]
 func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	products, err := productRepo.GetLowStock(inventoryThreshold)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
 
 	alerts := make([]models.InventoryAlert, 0)
 	for _, p := range products {
-		if p.Status != "deleted" && p.Stock <= inventoryThreshold {
-			alerts = append(alerts, models.InventoryAlert{
-				ProductID:    p.ID,
-				ProductName:  p.Name,
-				Threshold:    inventoryThreshold,
-				CurrentStock: p.Stock,
-			})
-		}
+		alerts = append(alerts, models.InventoryAlert{
+			ProductID:    p.ID,
+			ProductName:  p.Name,
+			Threshold:    inventoryThreshold,
+			CurrentStock: p.Stock,
+		})
 	}
 	json.NewEncoder(w).Encode(alerts)
 }
@@ -86,11 +89,8 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	p, ok := products[req.ProductID]
-	if !ok {
+	p, err := productRepo.GetByID(req.ProductID)
+	if err != nil {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
@@ -102,6 +102,11 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	p.UpdatedAt = time.Now()
 
+	if err := productRepo.UpdateStock(p.ID, p.Stock); err != nil {
+		http.Error(w, "failed to update stock", http.StatusInternalServerError)
+		return
+	}
+
 	changeType := "adjust"
 	if req.Quantity > 0 {
 		changeType = "in"
@@ -109,8 +114,7 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		changeType = "out"
 	}
 
-	inventoryLogs = append(inventoryLogs, models.Inventory{
-		ID:          nextInventoryID,
+	inventoryRepo.Create(&models.Inventory{
 		ProductID:   p.ID,
 		ChangeType:  changeType,
 		Quantity:    abs(req.Quantity),
@@ -120,7 +124,6 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		Operator:    "admin",
 		CreatedAt:   time.Now(),
 	})
-	nextInventoryID++
 
 	json.NewEncoder(w).Encode(p)
 }

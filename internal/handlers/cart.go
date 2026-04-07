@@ -90,20 +90,15 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 		req.Quantity = 1
 	}
 
-	// Get product from server data to verify price (issue #2: price verification)
-	dataMu.RLock()
-	product, exists := products[req.ProductID]
-	dataMu.RUnlock()
-
-	if !exists || product.Status != "on_sale" {
+	// Get product from database to verify price (issue #2: price verification)
+	product, err := productRepo.GetByID(req.ProductID)
+	if err != nil || product.Status != "on_sale" {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
 	// Verify stock - consider existing cart quantity
-	dataMu.RLock()
 	existingQty := getExistingCartQuantity(userID, req.ProductID)
-	dataMu.RUnlock()
 	if product.Stock < req.Quantity+existingQty {
 		http.Error(w, "insufficient stock", http.StatusBadRequest)
 		return
@@ -111,7 +106,7 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 
 	// Use authoritative product name and price from server (issue #2)
 	repo := db.NewCartRepository()
-	_, err := repo.AddCartItem(userID, req.ProductID, product.Name, product.Price, req.Quantity)
+	_, err = repo.AddCartItem(userID, req.ProductID, product.Name, product.Price, req.Quantity)
 	if err != nil {
 		http.Error(w, "failed to add item to cart", http.StatusInternalServerError)
 		return
@@ -188,11 +183,8 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify stock for the product
-	dataMu.RLock()
-	product, exists := products[itemToUpdate.ProductID]
-	dataMu.RUnlock()
-
-	if !exists || product.Status != "on_sale" {
+	product, err := productRepo.GetByID(itemToUpdate.ProductID)
+	if err != nil || product.Status != "on_sale" {
 		http.Error(w, "product no longer available", http.StatusBadRequest)
 		return
 	}

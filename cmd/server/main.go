@@ -105,6 +105,9 @@ func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	}
 	defer db.Close()
 
+	// Initialize repositories
+	handlers.InitRepositories()
+
 	// Create rate limiter (100 requests per minute)
 	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
 

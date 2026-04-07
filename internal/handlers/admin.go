@@ -1,38 +1,58 @@
 package handlers
 
 import (
+	"database/sql"
 	"sync"
 	"time"
 
+	"petshop/internal/db"
 	"petshop/internal/models"
 )
 
-// Admin data storage
+// Admin data storage - repository instances
 var (
-	products      = make(map[int64]*models.Product)
-	orders        = make(map[int64]*models.Order)
-	users         = make(map[int64]*models.User)
-	inventoryLogs = make([]models.Inventory, 0)
-	carousels     = make(map[int64]*models.Carousel)
-	announcements = make(map[int64]*models.Announcement)
-	systemConfigs = make(map[string]string)
+	productRepo      *db.ProductRepository
+	orderRepo        *db.OrderRepository
+	announcementRepo *db.AnnouncementRepository
+	carouselRepo     *db.CarouselRepository
+	inventoryRepo    *db.InventoryRepository
 
 	dataMu             sync.RWMutex
-	nextProductID      int64 = 1
-	nextOrderID        int64 = 1
-	nextUserID         int64 = 1
-	nextInventoryID    int64 = 1
-	nextCarouselID     int64 = 1
-	nextAnnouncementID int64 = 1
-
-	// 库存预警阈值
 	inventoryThreshold = 10
 )
 
-func init() {
-	// 初始化示例数据
-	products[1] = &models.Product{
-		ID:          1,
+// InitRepositories initializes all repositories with the given database
+func InitRepositories() {
+	productRepo = db.NewProductRepository()
+	orderRepo = db.NewOrderRepository()
+	announcementRepo = db.NewAnnouncementRepository()
+	carouselRepo = db.NewCarouselRepository()
+	inventoryRepo = db.NewInventoryRepository()
+
+	// Initialize sample data if database is empty
+	initSampleData()
+}
+
+// InitRepositoriesWithDB initializes repositories with a specific database instance (for testing)
+func InitRepositoriesWithDB(database *sql.DB) {
+	productRepo = db.NewProductRepositoryWithDB(database)
+	orderRepo = db.NewOrderRepositoryWithDB(database)
+	announcementRepo = db.NewAnnouncementRepositoryWithDB(database)
+	carouselRepo = db.NewCarouselRepositoryWithDB(database)
+	inventoryRepo = db.NewInventoryRepositoryWithDB(database)
+}
+
+func initSampleData() {
+	// Check if products exist
+	products, _ := productRepo.GetAll()
+	if len(products) > 0 {
+		return // Data already exists
+	}
+
+	now := time.Now()
+
+	// Initialize sample products
+	productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -40,11 +60,10 @@ func init() {
 		Stock:       50,
 		Status:      "on_sale",
 		Images:      []string{"/static/images/dog_food.jpg"},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	products[2] = &models.Product{
-		ID:          2,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
+	productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -52,64 +71,37 @@ func init() {
 		Stock:       8,
 		Status:      "on_sale",
 		Images:      []string{"/static/images/cat_food.jpg"},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	nextProductID = 3
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
 
-	users[1] = &models.User{
-		ID:        1,
-		Username:  "user1",
-		Email:     "user1@example.com",
-		Phone:     "13800138000",
-		Status:    "active",
-		Role:      "user",
-		CreatedAt: time.Now(),
-	}
-	users[2] = &models.User{
-		ID:        2,
-		Username:  "user2",
-		Email:     "user2@example.com",
-		Phone:     "13800138001",
-		Status:    "active",
-		Role:      "user",
-		CreatedAt: time.Now(),
-	}
-	nextUserID = 3
-
-	orders[1] = &models.Order{
-		ID:     1,
+	// Initialize sample orders
+	orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},
 		TotalAmount: 299.00,
 		Status:      "paid",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	nextOrderID = 2
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	})
 
-	carousels[1] = &models.Carousel{
-		ID:        1,
+	// Initialize sample carousels
+	carouselRepo.Create(&models.Carousel{
 		ImageURL:  "/static/carousel/banner1.jpg",
 		LinkURL:   "/product/1",
 		SortOrder: 1,
 		Title:     "春季大促",
 		Status:    "active",
-	}
-	nextCarouselID = 2
+	})
 
-	announcements[1] = &models.Announcement{
-		ID:        1,
+	// Initialize sample announcements
+	announcementRepo.Create(&models.Announcement{
 		Title:     "春节放假通知",
 		Content:   "春节期间客服工作时间调整",
 		Status:    "active",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	nextAnnouncementID = 2
-
-	systemConfigs["site_name"] = "宠物商店"
-	systemConfigs["inventory_threshold"] = "10"
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
 }

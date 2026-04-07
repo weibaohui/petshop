@@ -45,16 +45,12 @@ type UpdateProductRequest struct {
 // @Failure 401 {string} string "unauthorized"
 // @Router /api/admin/products [get]
 func ListProducts(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	productList := make([]*models.Product, 0, len(products))
-	for _, p := range products {
-		if p.Status != "deleted" {
-			productList = append(productList, p)
-		}
+	products, err := productRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(productList)
+	json.NewEncoder(w).Encode(products)
 }
 
 // GetProduct handles GET /api/admin/product?id=<id> and returns the product.
@@ -81,14 +77,12 @@ func GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	if p, ok := products[id]; ok {
-		json.NewEncoder(w).Encode(p)
+	p, err := productRepo.GetByID(id)
+	if err != nil {
+		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "product not found", http.StatusNotFound)
+	json.NewEncoder(w).Encode(p)
 }
 
 // CreateProduct handles POST /api/admin/products and creates a new product.
@@ -124,12 +118,8 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
 	now := time.Now()
 	p := &models.Product{
-		ID:          nextProductID,
 		Name:        req.Name,
 		Description: req.Description,
 		Category:    req.Category,
@@ -140,12 +130,14 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	products[nextProductID] = p
-	nextProductID++
 
-	// 记录库存入库
-	inventoryLogs = append(inventoryLogs, models.Inventory{
-		ID:          nextInventoryID,
+	if err := productRepo.Create(p); err != nil {
+		http.Error(w, "failed to create product", http.StatusInternalServerError)
+		return
+	}
+
+	// Record inventory log
+	inventoryRepo.Create(&models.Inventory{
 		ProductID:   p.ID,
 		ChangeType:  "in",
 		Quantity:    req.Stock,
@@ -155,7 +147,6 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Operator:    "system",
 		CreatedAt:   now,
 	})
-	nextInventoryID++
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(p)
@@ -191,24 +182,20 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	p, ok := products[req.ID]
-	if !ok {
+	p, err := productRepo.GetByID(req.ID)
+	if err != nil {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
-	// 检查库存变动
+	// Check stock change
 	stockChange := req.Stock - p.Stock
 	if stockChange != 0 {
 		changeType := "in"
 		if stockChange < 0 {
 			changeType = "out"
 		}
-		inventoryLogs = append(inventoryLogs, models.Inventory{
-			ID:          nextInventoryID,
+		inventoryRepo.Create(&models.Inventory{
 			ProductID:   p.ID,
 			ChangeType:  changeType,
 			Quantity:    abs(stockChange),
@@ -218,11 +205,10 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 			Operator:    "admin",
 			CreatedAt:   time.Now(),
 		})
-		nextInventoryID++
 
-		// 检查是否需要预警
+		// Check if inventory alert needed
 		if req.Stock <= inventoryThreshold && p.Stock > inventoryThreshold {
-			// 触发预警
+			// TODO: Trigger inventory alert logic
 		}
 	}
 
@@ -246,6 +232,11 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		p.Images = req.Images
 	}
 	p.UpdatedAt = time.Now()
+
+	if err := productRepo.Update(p); err != nil {
+		http.Error(w, "failed to update product", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(p)
 }
@@ -275,29 +266,31 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	p, ok := products[id]
-	if !ok {
+	// Check if product exists
+	p, err := productRepo.GetByID(id)
+	if err != nil {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
 
-	// 检查是否有未完成的订单
-	for _, order := range orders {
-		if order.Status != "delivered" && order.Status != "cancelled" && order.Status != "refunded" {
-			for _, item := range order.Products {
-				if item.ProductID == id {
-					http.Error(w, "product has pending orders", http.StatusConflict)
-					return
-				}
-			}
-		}
+	// Check for pending orders
+	hasPending, err := orderRepo.HasPendingOrdersByProduct(id)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	if hasPending {
+		http.Error(w, "product has pending orders", http.StatusConflict)
+		return
 	}
 
 	p.Status = "deleted"
 	p.UpdatedAt = time.Now()
+
+	if err := productRepo.Update(p); err != nil {
+		http.Error(w, "failed to delete product", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "product deleted"})

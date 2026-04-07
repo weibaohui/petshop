@@ -13,8 +13,7 @@ import (
 )
 
 func TestListAnnouncements(t *testing.T) {
-	resetAdminData()
-	t.Cleanup(resetAdminData)
+	resetAdminData(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/admin/announcements", nil)
 	w := httptest.NewRecorder()
@@ -30,9 +29,6 @@ func TestListAnnouncements(t *testing.T) {
 }
 
 func TestCreateAnnouncement(t *testing.T) {
-	resetAdminData()
-	t.Cleanup(resetAdminData)
-
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -67,7 +63,7 @@ func TestCreateAnnouncement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resetAdminData()
+			resetAdminData(t)
 			req := httptest.NewRequest(http.MethodPost, "/api/admin/announcements", strings.NewReader(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -87,9 +83,6 @@ func TestCreateAnnouncement(t *testing.T) {
 }
 
 func TestUpdateAnnouncement(t *testing.T) {
-	resetAdminData()
-	t.Cleanup(resetAdminData)
-
 	tests := []struct {
 		name           string
 		requestBody    string
@@ -118,7 +111,7 @@ func TestUpdateAnnouncement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resetAdminData()
+			resetAdminData(t)
 			req := httptest.NewRequest(http.MethodPut, "/api/admin/announcement", strings.NewReader(tt.requestBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -129,21 +122,16 @@ func TestUpdateAnnouncement(t *testing.T) {
 
 			// 验证公告确实被更新
 			if tt.wantStatusCode == http.StatusOK {
-				dataMu.RLock()
-				updatedAnnouncement, exists := announcements[1]
-				dataMu.RUnlock()
-				assert.True(t, exists, "公告应该存在")
-				assert.Equal(t, "更新后的公告", updatedAnnouncement.Title, "标题应该被更新")
-				assert.Equal(t, "更新后的内容", updatedAnnouncement.Content, "内容应该被更新")
+				updated, err := announcementRepo.GetByID(1)
+				assert.NoError(t, err, "公告应该存在")
+				assert.Equal(t, "更新后的公告", updated.Title, "标题应该被更新")
+				assert.Equal(t, "更新后的内容", updated.Content, "内容应该被更新")
 			}
 		})
 	}
 }
 
 func TestDeleteAnnouncement(t *testing.T) {
-	resetAdminData()
-	t.Cleanup(resetAdminData)
-
 	tests := []struct {
 		name           string
 		queryString    string
@@ -178,7 +166,7 @@ func TestDeleteAnnouncement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resetAdminData()
+			resetAdminData(t)
 			req := httptest.NewRequest(http.MethodDelete, "/api/admin/announcement"+tt.queryString, nil)
 			w := httptest.NewRecorder()
 
@@ -188,10 +176,8 @@ func TestDeleteAnnouncement(t *testing.T) {
 
 			// 验证公告确实被删除
 			if tt.wantStatusCode == http.StatusOK {
-				dataMu.RLock()
-				_, exists := announcements[1]
-				dataMu.RUnlock()
-				assert.False(t, exists, "公告ID=1应该被从存储中删除")
+				_, err := announcementRepo.GetByID(1)
+				assert.Error(t, err, "公告ID=1应该被从存储中删除")
 			}
 		})
 	}

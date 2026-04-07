@@ -6,11 +6,44 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"petshop/internal/models"
 )
 
 // User management functions
+
+// In-memory user storage (kept for compatibility)
+var users = make(map[int64]*models.User)
+var userMu sync.RWMutex
+var nextUserID int64 = 1
+
+func init() {
+	// Initialize sample users
+	userMu.Lock()
+	now := time.Now()
+	users[1] = &models.User{
+		ID:        1,
+		Username:  "user1",
+		Email:     "user1@example.com",
+		Phone:     "13800138000",
+		Status:    "active",
+		Role:      "user",
+		CreatedAt: now,
+	}
+	users[2] = &models.User{
+		ID:        2,
+		Username:  "user2",
+		Email:     "user2@example.com",
+		Phone:     "13800138001",
+		Status:    "active",
+		Role:      "user",
+		CreatedAt: now,
+	}
+	nextUserID = 3
+	userMu.Unlock()
+}
 
 // UpdateUserStatusRequest represents the request body for updating user status.
 type UpdateUserStatusRequest struct {
@@ -33,8 +66,8 @@ type ResetPasswordRequest struct {
 // @Success 200 {array} models.User
 // @Router /api/admin/users [get]
 func ListUsers(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	userMu.RLock()
+	defer userMu.RUnlock()
 
 	userList := make([]*models.User, 0, len(users))
 	for _, u := range users {
@@ -67,8 +100,8 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.RLock()
-	defer dataMu.RUnlock()
+	userMu.RLock()
+	defer userMu.RUnlock()
 
 	if u, ok := users[id]; ok {
 		json.NewEncoder(w).Encode(u)
@@ -102,8 +135,8 @@ func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
+	userMu.Lock()
+	defer userMu.Unlock()
 
 	u, ok := users[req.ID]
 	if !ok {
@@ -145,8 +178,8 @@ func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
+	userMu.Lock()
+	defer userMu.Unlock()
 
 	u, ok := users[req.UserID]
 	if !ok {
@@ -154,8 +187,8 @@ func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 实际应用中这里会发送重置邮件或生成新密码
-	// 简化处理，返回成功消息
+	// In real app, send reset email or generate new password
+	// Simplified: return success message
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message":  fmt.Sprintf("密码已重置，用户%s的新密码已发送至邮箱", u.Username),

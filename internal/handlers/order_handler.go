@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -36,17 +35,22 @@ type RefundRequest struct {
 // @Success 200 {array} models.Order
 // @Router /api/admin/orders [get]
 func ListOrders(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
 	status := r.URL.Query().Get("status")
-	orderList := make([]*models.Order, 0, len(orders))
 
-	for _, o := range orders {
-		if status == "" || o.Status == status {
-			orderList = append(orderList, o)
-		}
+	var orderList []*models.Order
+	var err error
+
+	if status == "" {
+		orderList, err = orderRepo.GetAll()
+	} else {
+		orderList, err = orderRepo.GetByStatus(status)
 	}
+
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(orderList)
 }
 
@@ -74,14 +78,13 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	if o, ok := orders[id]; ok {
-		json.NewEncoder(w).Encode(o)
+	o, err := orderRepo.GetByID(id)
+	if err != nil {
+		http.Error(w, "order not found", http.StatusNotFound)
 		return
 	}
-	http.Error(w, "order not found", http.StatusNotFound)
+
+	json.NewEncoder(w).Encode(o)
 }
 
 // UpdateOrderStatus handles PUT /api/admin/order and updates the order status.
@@ -109,11 +112,8 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	o, ok := orders[req.ID]
-	if !ok {
+	o, err := orderRepo.GetByID(req.ID)
+	if err != nil {
 		http.Error(w, "order not found", http.StatusNotFound)
 		return
 	}
@@ -129,6 +129,11 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 
 	o.Status = req.Status
 	o.UpdatedAt = time.Now()
+
+	if err := orderRepo.UpdateStatus(req.ID, req.Status); err != nil {
+		http.Error(w, "failed to update order", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(o)
 }
@@ -158,38 +163,41 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	o, ok := orders[req.OrderID]
-	if !ok {
+	o, err := orderRepo.GetByID(req.OrderID)
+	if err != nil {
 		http.Error(w, "order not found", http.StatusNotFound)
+		return
+	}
+
+	// Restore inventory for each item
+	for _, item := range o.Products {
+		p, err := productRepo.GetByID(item.ProductID)
+		if err == nil {
+			beforeStock := p.Stock
+			p.Stock += item.Quantity
+			productRepo.UpdateStock(p.ID, p.Stock)
+
+			inventoryRepo.Create(&models.Inventory{
+				ProductID:   p.ID,
+				ChangeType:  "in",
+				Quantity:    item.Quantity,
+				BeforeStock: beforeStock,
+				AfterStock:  p.Stock,
+				Reason:      "退款返还",
+				Operator:    "system",
+				CreatedAt:   time.Now(),
+			})
+		}
+	}
+
+	if err := orderRepo.UpdateRefund(req.OrderID, req.Reason); err != nil {
+		http.Error(w, "failed to process refund", http.StatusInternalServerError)
 		return
 	}
 
 	o.Status = "refunded"
 	o.RefundReason = req.Reason
 	o.UpdatedAt = time.Now()
-
-	// 恢复库存
-	for _, item := range o.Products {
-		if p, ok := products[item.ProductID]; ok {
-			beforeStock := p.Stock
-			p.Stock += item.Quantity
-			inventoryLogs = append(inventoryLogs, models.Inventory{
-				ID:          nextInventoryID,
-				ProductID:   p.ID,
-				ChangeType:  "in",
-				Quantity:    item.Quantity,
-				BeforeStock: beforeStock,
-				AfterStock:  p.Stock,
-				Reason:      fmt.Sprintf("退款返还: 订单%d", req.OrderID),
-				Operator:    "system",
-				CreatedAt:   time.Now(),
-			})
-			nextInventoryID++
-		}
-	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "refund processed"})

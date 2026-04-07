@@ -25,14 +25,13 @@ func setupCartTestDB(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// resetCartData resets the products data to initial state
-func resetCartData() {
-	dataMu.Lock()
-	defer dataMu.Unlock()
+// resetCartData resets the products data to initial state using database
+func resetCartData(t *testing.T) {
+	// Reset database and repositories
+	setupTestDB(t)
 
-	products = make(map[int64]*models.Product)
-	products[1] = &models.Product{
-		ID:          1,
+	// Create test products
+	productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -40,9 +39,8 @@ func resetCartData() {
 		Stock:       50,
 		Status:      "on_sale",
 		Images:      []string{"/static/images/dog_food.jpg"},
-	}
-	products[2] = &models.Product{
-		ID:          2,
+	})
+	productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -50,9 +48,8 @@ func resetCartData() {
 		Stock:       8,
 		Status:      "on_sale",
 		Images:      []string{"/static/images/cat_food.jpg"},
-	}
-	products[3] = &models.Product{
-		ID:          3,
+	})
+	productRepo.Create(&models.Product{
 		Name:        "缺货商品",
 		Description: "测试缺货",
 		Category:    "测试",
@@ -60,9 +57,8 @@ func resetCartData() {
 		Stock:       0,
 		Status:      "on_sale",
 		Images:      []string{},
-	}
-	products[4] = &models.Product{
-		ID:          4,
+	})
+	productRepo.Create(&models.Product{
 		Name:        "下架商品",
 		Description: "测试下架",
 		Category:    "测试",
@@ -70,8 +66,7 @@ func resetCartData() {
 		Stock:       10,
 		Status:      "off_sale",
 		Images:      []string{},
-	}
-	nextProductID = 5
+	})
 }
 
 // createRequestWithUser creates an HTTP request with user ID in context
@@ -90,7 +85,7 @@ func createRequestWithUser(method, path, body string, userID int64) *http.Reques
 
 func TestGetCart(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	tests := []struct {
 		name           string
@@ -247,7 +242,7 @@ func TestAddToCart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup fresh state for each subtest to avoid shared state
 			setupCartTestDB(t)
-			resetCartData()
+			resetCartData(t)
 
 			req := createRequestWithUser(http.MethodPost, "/api/cart", tt.requestBody, tt.userID)
 			req.Header.Set("Content-Type", "application/json")
@@ -280,7 +275,7 @@ func TestAddToCart_Unauthorized(t *testing.T) {
 
 func TestAddToCart_UpdateExisting(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	// Add item first time
 	req := createRequestWithUser(http.MethodPost, "/api/cart", `{"productId":1,"quantity":2}`, 1)
@@ -307,7 +302,7 @@ func TestAddToCart_UpdateExisting(t *testing.T) {
 
 func TestUpdateCartItem(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	tests := []struct {
 		name           string
@@ -447,7 +442,7 @@ func TestUpdateCartItem_Unauthorized(t *testing.T) {
 
 func TestUpdateCartItem_ProductNotOnSale(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	// Add item to cart using repository - product 4 is off_sale
 	repo := db.NewCartRepository()
@@ -471,7 +466,7 @@ func formatInt64(n int64) string {
 
 func TestDeleteCartItem(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	tests := []struct {
 		name           string
@@ -588,7 +583,7 @@ func TestDeleteCartItem_Unauthorized(t *testing.T) {
 
 func TestClearCart(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	tests := []struct {
 		name           string
@@ -688,7 +683,7 @@ func TestCalculateCart_Empty(t *testing.T) {
 
 func TestGetExistingCartQuantity(t *testing.T) {
 	setupCartTestDB(t)
-	resetCartData()
+	resetCartData(t)
 
 	// Test when item doesn't exist
 	qty := getExistingCartQuantity(1, 1)

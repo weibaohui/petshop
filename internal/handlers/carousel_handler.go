@@ -59,14 +59,12 @@ func isValidStatus(status string) bool {
 
 // ListCarousels handles GET /api/admin/carousels and returns all carousels.
 func ListCarousels(w http.ResponseWriter, r *http.Request) {
-	dataMu.RLock()
-	defer dataMu.RUnlock()
-
-	carouselList := make([]*models.Carousel, 0, len(carousels))
-	for _, c := range carousels {
-		carouselList = append(carouselList, c)
+	carousels, err := carouselRepo.GetAll()
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(carouselList)
+	json.NewEncoder(w).Encode(carousels)
 }
 
 // CreateCarousel handles POST /api/admin/carousels and creates a new carousel.
@@ -127,19 +125,18 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
 	c := &models.Carousel{
-		ID:        nextCarouselID,
 		ImageURL:  req.ImageURL,
 		LinkURL:   req.LinkURL,
 		SortOrder: req.SortOrder,
 		Title:     req.Title,
 		Status:    CarouselStatusActive,
 	}
-	carousels[nextCarouselID] = c
-	nextCarouselID++
+
+	if err := carouselRepo.Create(c); err != nil {
+		http.Error(w, "failed to create carousel", http.StatusInternalServerError)
+		return
+	}
 
 	carouselLogger.Info("carousel created successfully", map[string]interface{}{
 		"id":       c.ID,
@@ -171,88 +168,102 @@ func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if existing, ok := carousels[req.ID]; ok {
-		// Validate and update ImageURL
-		if req.ImageURL != nil {
-			if *req.ImageURL == "" {
-				carouselLogger.Warn("update carousel failed: imageUrl cannot be empty", map[string]interface{}{
-					"id": req.ID,
-				})
-				http.Error(w, "imageUrl cannot be empty", http.StatusBadRequest)
-				return
-			}
-			if !isValidURL(*req.ImageURL) {
-				carouselLogger.Warn("update carousel failed: invalid imageUrl format", map[string]interface{}{
-					"id":       req.ID,
-					"imageUrl": *req.ImageURL,
-				})
-				http.Error(w, "imageUrl must be a valid HTTP/HTTPS URL", http.StatusBadRequest)
-				return
-			}
-			existing.ImageURL = *req.ImageURL
-		}
-
-		// Validate and update LinkURL
-		if req.LinkURL != nil {
-			if *req.LinkURL != "" && !isValidURL(*req.LinkURL) {
-				carouselLogger.Warn("update carousel failed: invalid linkUrl format", map[string]interface{}{
-					"id":      req.ID,
-					"linkUrl": *req.LinkURL,
-				})
-				http.Error(w, "linkUrl must be a valid HTTP/HTTPS URL", http.StatusBadRequest)
-				return
-			}
-			existing.LinkURL = *req.LinkURL
-		}
-
-		// Validate and update SortOrder
-		if req.SortOrder != nil {
-			if *req.SortOrder < 0 {
-				carouselLogger.Warn("update carousel failed: sortOrder must be non-negative", map[string]interface{}{
-					"id":        req.ID,
-					"sortOrder": *req.SortOrder,
-				})
-				http.Error(w, "sortOrder must be non-negative", http.StatusBadRequest)
-				return
-			}
-			existing.SortOrder = *req.SortOrder
-		}
-
-		// Update Title
-		if req.Title != nil {
-			existing.Title = *req.Title
-		}
-
-		// Validate and update Status
-		if req.Status != nil {
-			if !isValidStatus(*req.Status) {
-				carouselLogger.Warn("update carousel failed: invalid status value", map[string]interface{}{
-					"id":     req.ID,
-					"status": *req.Status,
-				})
-				http.Error(w, "status must be either 'active' or 'inactive'", http.StatusBadRequest)
-				return
-			}
-			existing.Status = *req.Status
-		}
-
-		carouselLogger.Info("carousel updated successfully", map[string]interface{}{
-			"id":     existing.ID,
-			"title":  existing.Title,
-			"status": existing.Status,
+	// Get existing carousel from database
+	existing, err := carouselRepo.GetByID(req.ID)
+	if err != nil {
+		carouselLogger.Warn("update carousel failed: carousel not found", map[string]interface{}{
+			"id": req.ID,
 		})
-
-		json.NewEncoder(w).Encode(existing)
+		http.Error(w, "carousel not found", http.StatusNotFound)
 		return
 	}
 
-	carouselLogger.Warn("carousel not found", map[string]interface{}{
-		"id": req.ID,
+	// Create a copy for validation
+	temp := *existing
+
+	// Validate and update ImageURL
+	if req.ImageURL != nil {
+		if *req.ImageURL == "" {
+			carouselLogger.Warn("update carousel failed: imageUrl cannot be empty", map[string]interface{}{
+				"id": req.ID,
+			})
+			http.Error(w, "imageUrl cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if !isValidURL(*req.ImageURL) {
+			carouselLogger.Warn("update carousel failed: invalid imageUrl format", map[string]interface{}{
+				"id":       req.ID,
+				"imageUrl": *req.ImageURL,
+			})
+			http.Error(w, "imageUrl must be a valid HTTP/HTTPS URL", http.StatusBadRequest)
+			return
+		}
+		temp.ImageURL = *req.ImageURL
+	}
+
+	// Validate and update LinkURL
+	if req.LinkURL != nil {
+		if *req.LinkURL != "" && !isValidURL(*req.LinkURL) {
+			carouselLogger.Warn("update carousel failed: invalid linkUrl format", map[string]interface{}{
+				"id":      req.ID,
+				"linkUrl": *req.LinkURL,
+			})
+			http.Error(w, "linkUrl must be a valid HTTP/HTTPS URL", http.StatusBadRequest)
+			return
+		}
+		temp.LinkURL = *req.LinkURL
+	}
+
+	// Validate and update SortOrder
+	if req.SortOrder != nil {
+		if *req.SortOrder < 0 {
+			carouselLogger.Warn("update carousel failed: sortOrder must be non-negative", map[string]interface{}{
+				"id":        req.ID,
+				"sortOrder": *req.SortOrder,
+			})
+			http.Error(w, "sortOrder must be non-negative", http.StatusBadRequest)
+			return
+		}
+		temp.SortOrder = *req.SortOrder
+	}
+
+	// Update Title
+	if req.Title != nil {
+		temp.Title = *req.Title
+	}
+
+	// Validate and update Status
+	if req.Status != nil {
+		if !isValidStatus(*req.Status) {
+			carouselLogger.Warn("update carousel failed: invalid status value", map[string]interface{}{
+				"id":     req.ID,
+				"status": *req.Status,
+			})
+			http.Error(w, "status must be either 'active' or 'inactive'", http.StatusBadRequest)
+			return
+		}
+		temp.Status = *req.Status
+	}
+
+	// All validations passed, update the existing record
+	*existing = temp
+
+	if err := carouselRepo.Update(existing); err != nil {
+		carouselLogger.Error("failed to update carousel", map[string]interface{}{
+			"id":    req.ID,
+			"error": err.Error(),
+		})
+		http.Error(w, "failed to update carousel", http.StatusInternalServerError)
+		return
+	}
+
+	carouselLogger.Info("carousel updated successfully", map[string]interface{}{
+		"id":     existing.ID,
+		"title":  existing.Title,
+		"status": existing.Status,
 	})
-	http.Error(w, "carousel not found", http.StatusNotFound)
+
+	json.NewEncoder(w).Encode(existing)
 }
 
 // DeleteCarousel handles DELETE /api/admin/carousel?id=<id> and deletes the carousel.
@@ -273,21 +284,27 @@ func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataMu.Lock()
-	defer dataMu.Unlock()
-
-	if _, ok := carousels[id]; ok {
-		delete(carousels, id)
-		carouselLogger.Info("carousel deleted successfully", map[string]interface{}{
+	if _, err := carouselRepo.GetByID(id); err != nil {
+		carouselLogger.Warn("delete carousel failed: carousel not found", map[string]interface{}{
 			"id": id,
 		})
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
+		http.Error(w, "carousel not found", http.StatusNotFound)
 		return
 	}
 
-	carouselLogger.Warn("delete carousel failed: carousel not found", map[string]interface{}{
+	if err := carouselRepo.Delete(id); err != nil {
+		carouselLogger.Error("failed to delete carousel", map[string]interface{}{
+			"id":    id,
+			"error": err.Error(),
+		})
+		http.Error(w, "failed to delete carousel", http.StatusInternalServerError)
+		return
+	}
+
+	carouselLogger.Info("carousel deleted successfully", map[string]interface{}{
 		"id": id,
 	})
-	http.Error(w, "carousel not found", http.StatusNotFound)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
 }
