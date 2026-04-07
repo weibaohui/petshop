@@ -259,7 +259,7 @@ func TestSetPaginationHeaders(t *testing.T) {
 			},
 		},
 		{
-			name:  "不满一页的数据设置响应头",
+			name:  "总数不能整除limit时向上取整计算总页数",
 			page:  1,
 			limit: 10,
 			total: 25,
@@ -290,6 +290,18 @@ func TestSetPaginationHeaders(t *testing.T) {
 			expectedHeaders: map[string]string{
 				"X-Page":        "1",
 				"X-Limit":       "0",
+				"X-Total":       "50",
+				"X-Total-Pages": "0",
+			},
+		},
+		{
+			name:  "limit为负数时不panic，返回0总页数",
+			page:  1,
+			limit: -5,
+			total: 50,
+			expectedHeaders: map[string]string{
+				"X-Page":        "1",
+				"X-Limit":       "-5",
 				"X-Total":       "50",
 				"X-Total-Pages": "0",
 			},
