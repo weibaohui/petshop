@@ -43,7 +43,7 @@ func isValidURL(str string) bool {
 	if err != nil {
 		return false
 	}
-	return u.Scheme == "http" || u.Scheme == "https"
+	return (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }
 
 // isValidStatus validates if the given string is a valid carousel status

@@ -294,7 +294,7 @@ func TestUpdateCarousel_Handler(t *testing.T) {
 			},
 		},
 		{
-			name:           "update with zero values should keep existing",
+			name:           "update with empty imageUrl should return error",
 			requestBody:    `{"id":1,"imageUrl":"","title":"","sortOrder":0}`,
 			wantStatusCode: http.StatusBadRequest,
 			wantErr:        true,
