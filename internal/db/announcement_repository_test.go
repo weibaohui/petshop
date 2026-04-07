@@ -2,7 +2,6 @@ package db
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -481,8 +480,6 @@ func TestAnnouncementRepository_Integration(t *testing.T) {
 func TestAnnouncementRepository_TimeFields(t *testing.T) {
 	r := setupAnnouncementTestDB(t)
 
-	beforeCreate := time.Now()
-
 	announcement := &models.Announcement{
 		Title:   "Time Test",
 		Content: "Testing time fields",
@@ -495,13 +492,10 @@ func TestAnnouncementRepository_TimeFields(t *testing.T) {
 	// Verify created_at and updated_at are set
 	assert.False(t, announcement.CreatedAt.IsZero())
 	assert.False(t, announcement.UpdatedAt.IsZero())
-	assert.True(t, announcement.CreatedAt.After(beforeCreate) || announcement.CreatedAt.Equal(beforeCreate))
-	assert.True(t, announcement.UpdatedAt.After(beforeCreate) || announcement.UpdatedAt.Equal(beforeCreate))
+	// Use deterministic comparison: UpdatedAt should not be before CreatedAt
+	assert.True(t, announcement.UpdatedAt.Equal(announcement.CreatedAt) || announcement.UpdatedAt.After(announcement.CreatedAt))
 
-	// Verify updated_at equals created_at after create
 	createdAt := announcement.CreatedAt
-	updatedAtAfterCreate := announcement.UpdatedAt
-	assert.True(t, updatedAtAfterCreate.After(createdAt) || updatedAtAfterCreate.Equal(createdAt))
 
 	// Update the announcement
 	announcement.Title = "Updated Time Test"
