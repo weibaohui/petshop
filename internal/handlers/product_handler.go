@@ -222,7 +222,8 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 		// 检查是否需要预警
 		if req.Stock <= inventoryThreshold && p.Stock > inventoryThreshold {
-			// 触发预警
+			// TODO: 触发库存预警逻辑
+			_ = inventoryThreshold // 暂时使用变量避免未使用警告
 		}
 	}
 

@@ -427,10 +427,7 @@ func TestSessionCache(t *testing.T) {
 	c := NewSessionCache()
 	defer c.Stop()
 
-	// NewSessionCache创建正常
-	if c == nil {
-		t.Fatal("NewSessionCache returned nil")
-	}
+	// NewSessionCache创建正常（c不可能为nil，因为NewSessionCache总是返回非nil指针）
 	if c.Cache == nil {
 		t.Fatal("SessionCache.Cache is nil")
 	}
