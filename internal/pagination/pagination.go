@@ -119,7 +119,10 @@ func GetPageAndLimit(r *http.Request) (page, limit int) {
 
 // SetPaginationHeaders sets pagination headers in response
 func SetPaginationHeaders(w http.ResponseWriter, page, limit, total int) {
-	totalPages := (total + limit - 1) / limit
+	totalPages := 0
+	if limit > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
 	w.Header().Set("X-Page", strconv.Itoa(page))
 	w.Header().Set("X-Limit", strconv.Itoa(limit))
 	w.Header().Set("X-Total", strconv.Itoa(total))
