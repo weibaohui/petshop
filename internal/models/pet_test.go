@@ -107,16 +107,16 @@ func TestPetStruct(t *testing.T) {
 
 	t.Run("Pet with all fields populated", func(t *testing.T) {
 		pet := Pet{
-			ID:          4,
-			Name:        "Max",
-			Type:        "Dog",
-			Breed:       "Golden Retriever",
-			PhotoUrls:   []string{"url1", "url2", "url3"},
-			Status:      "available",
-			Age:         24,
-			AgeDisplay:  "2岁",
-			Price:       2999.99,
-			Description: "Friendly golden retriever",
+			ID:           4,
+			Name:         "Max",
+			Type:         "Dog",
+			Breed:        "Golden Retriever",
+			PhotoUrls:    []string{"url1", "url2", "url3"},
+			Status:       "available",
+			Age:          24,
+			AgeDisplay:   "2岁",
+			Price:        2999.99,
+			Description:  "Friendly golden retriever",
 			HealthStatus: "healthy",
 			VaccinationRecords: []VaccinationRecord{
 				{Name: "Rabies", Date: "2024-01-01", Completed: true},
