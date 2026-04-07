@@ -117,7 +117,7 @@ export function TokenManagementPage() {
     try {
       await navigator.clipboard.writeText(text);
       message.success('已复制到剪贴板');
-    } catch (err) {
+    } catch {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -128,7 +128,7 @@ export function TokenManagementPage() {
       try {
         document.execCommand('copy');
         message.success('已复制到剪贴板');
-      } catch (fallbackErr) {
+      } catch {
         message.error('复制失败，请手动复制');
       }
       document.body.removeChild(textArea);
