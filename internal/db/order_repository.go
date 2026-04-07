@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
 	"petshop/internal/models"
@@ -180,6 +181,41 @@ func (r *OrderRepository) getOrderItems(orderID int64) ([]models.OrderItem, erro
 	return items, rows.Err()
 }
 
+// getOrderItemsBatch returns all items for multiple orders in a single query
+func (r *OrderRepository) getOrderItemsBatch(orderIDs []int64) (map[int64][]models.OrderItem, error) {
+	if len(orderIDs) == 0 {
+		return make(map[int64][]models.OrderItem), nil
+	}
+
+	// Build IN clause placeholders
+	placeholders := make([]string, len(orderIDs))
+	args := make([]interface{}, len(orderIDs))
+	for i, id := range orderIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := "SELECT order_id, product_id, product_name, price, quantity, subtotal FROM order_items WHERE order_id IN (" +
+		strings.Join(placeholders, ",") + ")"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	itemsMap := make(map[int64][]models.OrderItem)
+	for rows.Next() {
+		var orderID int64
+		var item models.OrderItem
+		if err := rows.Scan(&orderID, &item.ProductID, &item.ProductName, &item.Price, &item.Quantity, &item.Subtotal); err != nil {
+			return nil, err
+		}
+		itemsMap[orderID] = append(itemsMap[orderID], item)
+	}
+	return itemsMap, rows.Err()
+}
+
 // scanOrders scans order rows
 func (r *OrderRepository) scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	var orders []*models.Order
@@ -202,13 +238,15 @@ func (r *OrderRepository) scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	// Close rows before executing another query
 	rows.Close()
 
-	// Now get order items for each order
+	// Batch fetch all order items in a single query
+	itemsMap, err := r.getOrderItemsBatch(orderIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign items to corresponding orders
 	for i, orderID := range orderIDs {
-		items, err := r.getOrderItems(orderID)
-		if err != nil {
-			return nil, err
-		}
-		orders[i].Products = items
+		orders[i].Products = itemsMap[orderID]
 	}
 
 	return orders, nil
