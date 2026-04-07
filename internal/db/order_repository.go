@@ -25,7 +25,7 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 // GetAll returns all orders
 func (r *OrderRepository) GetAll() ([]*models.Order, error) {
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 	o := &models.Order{}
 
 	err := r.db.QueryRow(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders WHERE id = ?`, id).Scan(
 		&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 // GetByStatus returns orders filtered by status
 func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders WHERE status = ? ORDER BY id DESC`, status)
 	if err != nil {
 		return nil, err
@@ -183,20 +183,33 @@ func (r *OrderRepository) getOrderItems(orderID int64) ([]models.OrderItem, erro
 // scanOrders scans order rows
 func (r *OrderRepository) scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	var orders []*models.Order
+	var orderIDs []int64
+
+	// First, collect all orders
 	for rows.Next() {
 		o := &models.Order{}
 		if err := rows.Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
+		orders = append(orders, o)
+		orderIDs = append(orderIDs, o.ID)
+	}
 
-		// Get order items
-		items, err := r.getOrderItems(o.ID)
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Close rows before executing another query
+	rows.Close()
+
+	// Now get order items for each order
+	for i, orderID := range orderIDs {
+		items, err := r.getOrderItems(orderID)
 		if err != nil {
 			return nil, err
 		}
-		o.Products = items
-
-		orders = append(orders, o)
+		orders[i].Products = items
 	}
-	return orders, rows.Err()
+
+	return orders, nil
 }
