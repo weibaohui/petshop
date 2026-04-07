@@ -9,6 +9,8 @@ import (
 	"petshop/internal/models"
 )
 
+var errOrderRepositoryDBNotInitialized = errors.New("order repository database is not initialized")
+
 // OrderRepository handles order database operations
 type OrderRepository struct {
 	db *sql.DB
@@ -24,10 +26,9 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-// ensureDB checks if the database connection is available
 func (r *OrderRepository) ensureDB() error {
-	if r.db == nil {
-		return errors.New("database connection is not initialized")
+	if r == nil || r.db == nil {
+		return errOrderRepositoryDBNotInitialized
 	}
 	return nil
 }
