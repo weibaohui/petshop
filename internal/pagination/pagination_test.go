@@ -129,9 +129,9 @@ func TestNewPagedResponse(t *testing.T) {
 
 func TestGetPageAndLimit(t *testing.T) {
 	tests := []struct {
-		name         string
-		query        url.Values
-		expectedPage int
+		name          string
+		query         url.Values
+		expectedPage  int
 		expectedLimit int
 	}{
 		{
@@ -216,11 +216,11 @@ func TestGetPageAndLimit(t *testing.T) {
 
 func TestSetPaginationHeaders(t *testing.T) {
 	tests := []struct {
-		name             string
-		page             int
-		limit            int
-		total            int
-		expectedHeaders  map[string]string
+		name            string
+		page            int
+		limit           int
+		total           int
+		expectedHeaders map[string]string
 	}{
 		{
 			name:  "正常分页设置响应头",
@@ -280,6 +280,18 @@ func TestSetPaginationHeaders(t *testing.T) {
 				"X-Limit":       "10",
 				"X-Total":       "50",
 				"X-Total-Pages": "5",
+			},
+		},
+		{
+			name:  "limit为0时不panic，返回0总页数",
+			page:  1,
+			limit: 0,
+			total: 50,
+			expectedHeaders: map[string]string{
+				"X-Page":        "1",
+				"X-Limit":       "0",
+				"X-Total":       "50",
+				"X-Total-Pages": "0",
 			},
 		},
 	}
