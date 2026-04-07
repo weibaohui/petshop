@@ -8,7 +8,13 @@ import (
 
 // abs returns the absolute value of an integer
 func abs(x int) int {
-	return int(math.Abs(float64(x)))
+	if x < 0 {
+		if x == math.MinInt {
+			return math.MaxInt
+		}
+		return -x
+	}
+	return x
 }
 
 // writeJSON writes a JSON response
