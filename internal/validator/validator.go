@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"petshop/internal/models"
 )
 
 // ValidationError represents a validation error
@@ -64,9 +66,18 @@ func ValidatePet(name, petType, status string) ValidationErrors {
 		errors = append(errors, ValidationError{Field: "type", Message: "type is required"})
 	}
 
-	validStatuses := map[string]bool{"available": true, "pending": true, "sold": true}
+	// 使用 models 包中的常量构建有效状态映射
+	validStatuses := map[string]bool{
+		string(models.StatusAvailable): true,
+		string(models.StatusPending):   true,
+		string(models.StatusSold):      true,
+	}
 	if status != "" && !validStatuses[strings.ToLower(status)] {
-		errors = append(errors, ValidationError{Field: "status", Message: "status must be one of: available, pending, sold"})
+		// 动态生成错误信息，与 models 常量保持一致
+		errors = append(errors, ValidationError{
+			Field:   "status",
+			Message: fmt.Sprintf("status must be one of: %s, %s, %s", models.StatusAvailable, models.StatusPending, models.StatusSold),
+		})
 	}
 
 	return errors
