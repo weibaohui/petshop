@@ -3,10 +3,14 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"petshop/internal/models"
 )
+
+var errOrderRepositoryDBNotInitialized = errors.New("order repository database is not initialized")
 
 // OrderRepository handles order database operations
 type OrderRepository struct {
@@ -23,13 +27,9 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-// ensureDB checks if the repository and database are initialized
 func (r *OrderRepository) ensureDB() error {
-	if r == nil {
-		return errors.New("order repository database is not initialized")
-	}
-	if r.db == nil {
-		return errors.New("order repository database is not initialized")
+	if r == nil || r.db == nil {
+		return errOrderRepositoryDBNotInitialized
 	}
 	return nil
 }
@@ -40,7 +40,7 @@ func (r *OrderRepository) GetAll() ([]*models.Order, error) {
 		return nil, err
 	}
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 	o := &models.Order{}
 
 	err := r.db.QueryRow(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders WHERE id = ?`, id).Scan(
 		&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
@@ -81,7 +81,7 @@ func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 		return nil, err
 	}
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
+		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
 		FROM orders WHERE status = ? ORDER BY id DESC`, status)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 // Create creates a new order with items in a transaction
 func (r *OrderRepository) Create(o *models.Order) error {
 	if o == nil {
-		return errors.New("order cannot be nil")
+		return fmt.Errorf("order cannot be nil")
 	}
 	if err := r.ensureDB(); err != nil {
 		return err
@@ -219,23 +219,73 @@ func (r *OrderRepository) getOrderItems(orderID int64) ([]models.OrderItem, erro
 	return items, rows.Err()
 }
 
+// getOrderItemsBatch returns all items for multiple orders in a single query
+func (r *OrderRepository) getOrderItemsBatch(orderIDs []int64) (map[int64][]models.OrderItem, error) {
+	if len(orderIDs) == 0 {
+		return make(map[int64][]models.OrderItem), nil
+	}
+
+	// Build IN clause placeholders
+	placeholders := make([]string, len(orderIDs))
+	args := make([]interface{}, len(orderIDs))
+	for i, id := range orderIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := "SELECT order_id, product_id, product_name, price, quantity, subtotal FROM order_items WHERE order_id IN (" +
+		strings.Join(placeholders, ",") + ")"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	itemsMap := make(map[int64][]models.OrderItem)
+	for rows.Next() {
+		var orderID int64
+		var item models.OrderItem
+		if err := rows.Scan(&orderID, &item.ProductID, &item.ProductName, &item.Price, &item.Quantity, &item.Subtotal); err != nil {
+			return nil, err
+		}
+		itemsMap[orderID] = append(itemsMap[orderID], item)
+	}
+	return itemsMap, rows.Err()
+}
+
 // scanOrders scans order rows
 func (r *OrderRepository) scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	var orders []*models.Order
+	var orderIDs []int64
+
+	// First, collect all orders
 	for rows.Next() {
 		o := &models.Order{}
 		if err := rows.Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
 		}
-
-		// Get order items
-		items, err := r.getOrderItems(o.ID)
-		if err != nil {
-			return nil, err
-		}
-		o.Products = items
-
 		orders = append(orders, o)
+		orderIDs = append(orderIDs, o.ID)
 	}
-	return orders, rows.Err()
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Close rows before executing another query
+	rows.Close()
+
+	// Batch fetch all order items in a single query
+	itemsMap, err := r.getOrderItemsBatch(orderIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign items to corresponding orders
+	for i, orderID := range orderIDs {
+		orders[i].Products = itemsMap[orderID]
+	}
+
+	return orders, nil
 }
