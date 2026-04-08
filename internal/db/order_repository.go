@@ -26,7 +26,7 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 // ensureDB checks if the repository and database are initialized
 func (r *OrderRepository) ensureDB() error {
 	if r == nil {
-		return errors.New("order repository is not initialized")
+		return errors.New("order repository database is not initialized")
 	}
 	if r.db == nil {
 		return errors.New("order repository database is not initialized")
@@ -93,6 +93,9 @@ func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 
 // Create creates a new order with items in a transaction
 func (r *OrderRepository) Create(o *models.Order) error {
+	if o == nil {
+		return errors.New("order cannot be nil")
+	}
 	if err := r.ensureDB(); err != nil {
 		return err
 	}
