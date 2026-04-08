@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,7 +18,7 @@ import (
 
 // setupTestDB 创建内存数据库并初始化
 func setupTestDB(t *testing.T) *sql.DB {
-	database, err := sql.Open("sqlite3", ":memory:")
+	database, err := sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
@@ -99,13 +100,109 @@ func setupTestDB(t *testing.T) *sql.DB {
 	carouselRepo = db.NewCarouselRepositoryWithDB(database)
 	inventoryRepo = db.NewInventoryRepositoryWithDB(database)
 
+	// Verify tables were created
+	var count int
+	err = database.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='order_items'").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to check order_items table: %v", err)
+	}
+	if count == 0 {
+		t.Fatal("order_items table was not created")
+	}
+
+	// Debug: verify orderRepo is using the correct database
+	if orderRepo == nil {
+		t.Fatal("orderRepo is nil after setup")
+	}
+
 	return database
 }
 
 // resetAdminData 重置所有 admin 数据到初始状态
-func resetAdminData(t *testing.T) {
-	// 使用新的内存数据库
-	setupTestDB(t)
+func resetAdminData(t *testing.T) *sql.DB {
+	// 使用新的内存数据库（每个测试使用不同的数据库名称以隔离数据）
+	dbName := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	database, err := sql.Open("sqlite3", dbName)
+	if err != nil {
+		t.Fatalf("Failed to open test database: %v", err)
+	}
+
+	// Create tables
+	schema := `
+	CREATE TABLE IF NOT EXISTS products (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		description TEXT,
+		category TEXT NOT NULL,
+		price REAL NOT NULL,
+		stock INTEGER NOT NULL DEFAULT 0,
+		status TEXT NOT NULL DEFAULT 'on_sale',
+		images TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS orders (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		total_amount REAL NOT NULL,
+		status TEXT NOT NULL DEFAULT 'pending',
+		refund_reason TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS order_items (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		order_id INTEGER NOT NULL,
+		product_id INTEGER NOT NULL,
+		product_name TEXT NOT NULL,
+		price REAL NOT NULL,
+		quantity INTEGER NOT NULL,
+		subtotal REAL NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS announcements (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		content TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'active',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS carousels (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		image_url TEXT NOT NULL,
+		link_url TEXT,
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		title TEXT,
+		status TEXT NOT NULL DEFAULT 'active'
+	);
+
+	CREATE TABLE IF NOT EXISTS inventory_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		product_id INTEGER NOT NULL,
+		change_type TEXT NOT NULL,
+		quantity INTEGER NOT NULL,
+		before_stock INTEGER NOT NULL,
+		after_stock INTEGER NOT NULL,
+		reason TEXT,
+		operator TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err = database.Exec(schema)
+	if err != nil {
+		t.Fatalf("Failed to create tables: %v", err)
+	}
+
+	// Initialize repositories with test database
+	productRepo = db.NewProductRepositoryWithDB(database)
+	orderRepo = db.NewOrderRepositoryWithDB(database)
+	announcementRepo = db.NewAnnouncementRepositoryWithDB(database)
+	carouselRepo = db.NewCarouselRepositoryWithDB(database)
+	inventoryRepo = db.NewInventoryRepositoryWithDB(database)
 
 	// 重置用户数据（保持在内存中）
 	userMu.Lock()
@@ -162,14 +259,23 @@ func resetAdminData(t *testing.T) {
 	})
 
 	// 订单 1
-	orderRepo.Create(&models.Order{
+	if err := orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
 		},
 		TotalAmount: 299.00,
 		Status:      "paid",
-	})
+	}); err != nil {
+		t.Fatalf("Failed to create order: %v", err)
+	}
+
+	// Debug: Verify order_items table exists after creating order
+	var itemCount int
+	if err := database.QueryRow("SELECT count(*) FROM order_items").Scan(&itemCount); err != nil {
+		t.Fatalf("Failed to query order_items after create: %v", err)
+	}
+	fmt.Printf("After Create: order_items count = %d\n", itemCount)
 
 	// 轮播图 1
 	carouselRepo.Create(&models.Carousel{
@@ -186,6 +292,8 @@ func resetAdminData(t *testing.T) {
 		Content: "春节期间客服工作时间调整",
 		Status:  "active",
 	})
+
+	return database
 }
 
 // ==================== Product Handler Tests ====================

@@ -8,6 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// strPtr returns a pointer to a string
+func strPtr(s string) *string {
+	return &s
+}
+
 func TestProductStruct(t *testing.T) {
 	t.Run("Product JSON serialization and deserialization", func(t *testing.T) {
 		product := Product{
@@ -188,7 +193,7 @@ func TestOrderAndOrderItemStruct(t *testing.T) {
 			},
 			TotalAmount:  59.98,
 			Status:       "pending",
-			RefundReason: "",
+			RefundReason: nil,
 			CreatedAt:    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 		}
@@ -224,7 +229,7 @@ func TestOrderAndOrderItemStruct(t *testing.T) {
 			Products:     []OrderItem{},
 			TotalAmount:  0,
 			Status:       "refunded",
-			RefundReason: "Customer request",
+			RefundReason: strPtr("Customer request"),
 			CreatedAt:    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
 		}
@@ -237,7 +242,8 @@ func TestOrderAndOrderItemStruct(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "refunded", decoded.Status)
-		assert.Equal(t, "Customer request", decoded.RefundReason)
+		assert.NotNil(t, decoded.RefundReason)
+		assert.Equal(t, "Customer request", *decoded.RefundReason)
 
 		// Verify refundReason field exists and has correct value when non-empty (omitempty behavior)
 		var jsonMap map[string]json.RawMessage

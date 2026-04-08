@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -137,7 +138,7 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Record inventory log
-	inventoryRepo.Create(&models.Inventory{
+	if err := inventoryRepo.Create(&models.Inventory{
 		ProductID:   p.ID,
 		ChangeType:  "in",
 		Quantity:    req.Stock,
@@ -146,7 +147,10 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Reason:      "新增商品",
 		Operator:    "system",
 		CreatedAt:   now,
-	})
+	}); err != nil {
+		// Log inventory record failure but don't fail the request
+		fmt.Printf("Failed to record inventory log: %v\n", err)
+	}
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(p)
