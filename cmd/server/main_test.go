@@ -31,7 +31,9 @@ func setupTestServer(t *testing.T) (http.Handler, func()) {
 	handlers.ResetPetsForTesting()
 
 	// Initialize logger
-	logger.Init(tempDir)
+	if err := logger.Init(tempDir); err != nil {
+		t.Fatalf("Failed to initialize logger: %v", err)
+	}
 
 	// Initialize database with temp file
 	dbPath := filepath.Join(tempDir, "test.db")
@@ -39,6 +41,9 @@ func setupTestServer(t *testing.T) (http.Handler, func()) {
 	if err := db.InitDB(dbPath); err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Initialize repositories with the test database
+	handlers.InitRepositories()
 
 	// Create rate limiter for testing
 	rateLimiter := middleware.NewRateLimiter(100, time.Minute)

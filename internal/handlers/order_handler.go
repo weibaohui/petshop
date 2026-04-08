@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -37,6 +38,13 @@ type RefundRequest struct {
 func ListOrders(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 
+	// Debug: check if orderRepo is nil
+	if orderRepo == nil {
+		fmt.Printf("ListOrders error: orderRepo is nil\n")
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
 	var orderList []*models.Order
 	var err error
 
@@ -47,6 +55,8 @@ func ListOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		// Log the actual error for debugging
+		fmt.Printf("ListOrders error: %v\n", err)
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
@@ -175,9 +185,13 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			beforeStock := p.Stock
 			p.Stock += item.Quantity
-			productRepo.UpdateStock(p.ID, p.Stock)
+			if err := productRepo.UpdateStock(p.ID, p.Stock); err != nil {
+				// Log error but continue processing other items
+				fmt.Printf("Failed to update stock: %v\n", err)
+				continue
+			}
 
-			inventoryRepo.Create(&models.Inventory{
+			if invErr := inventoryRepo.Create(&models.Inventory{
 				ProductID:   p.ID,
 				ChangeType:  "in",
 				Quantity:    item.Quantity,
@@ -186,7 +200,10 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 				Reason:      "退款返还",
 				Operator:    "system",
 				CreatedAt:   time.Now(),
-			})
+			}); invErr != nil {
+				// Log inventory record failure but don't fail the refund
+				fmt.Printf("Failed to record inventory log: %v\n", invErr)
+			}
 		}
 	}
 
@@ -196,7 +213,7 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o.Status = "refunded"
-	o.RefundReason = req.Reason
+	o.RefundReason = &req.Reason
 	o.UpdatedAt = time.Now()
 
 	w.WriteHeader(http.StatusOK)

@@ -63,7 +63,9 @@ func Init(logDir string) error {
 	var err error
 	initFunc := func() {
 		if logDir != "" {
-			os.MkdirAll(logDir, 0755)
+			if mkdirErr := os.MkdirAll(logDir, 0755); mkdirErr != nil {
+				fmt.Fprintf(os.Stderr, "failed to create log directory: %v\n", mkdirErr)
+			}
 			logFile, err = os.OpenFile(
 				filepath.Join(logDir, fmt.Sprintf("app_%s.log", time.Now().Format("20060102"))),
 				os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -130,7 +132,9 @@ func (l *Logger) log(level LogLevel, msg string, fields map[string]interface{}) 
 
 	if logFile != nil {
 		l.mu.Lock()
-		logFile.WriteString(output)
+		if _, writeErr := logFile.WriteString(output); writeErr != nil {
+			fmt.Fprintf(os.Stderr, "failed to write to log file: %v\n", writeErr)
+		}
 		l.mu.Unlock()
 	}
 }

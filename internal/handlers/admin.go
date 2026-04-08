@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -52,7 +53,7 @@ func initSampleData() {
 	now := time.Now()
 
 	// Initialize sample products
-	productRepo.Create(&models.Product{
+	if err := productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -62,8 +63,11 @@ func initSampleData() {
 		Images:      []string{"/static/images/dog_food.jpg"},
 		CreatedAt:   now,
 		UpdatedAt:   now,
-	})
-	productRepo.Create(&models.Product{
+	}); err != nil {
+		// Log error but continue - sample data init failure is not fatal
+		fmt.Printf("Failed to create sample product: %v\n", err)
+	}
+	if err := productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -73,10 +77,12 @@ func initSampleData() {
 		Images:      []string{"/static/images/cat_food.jpg"},
 		CreatedAt:   now,
 		UpdatedAt:   now,
-	})
+	}); err != nil {
+		fmt.Printf("Failed to create sample product: %v\n", err)
+	}
 
 	// Initialize sample orders
-	orderRepo.Create(&models.Order{
+	if err := orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -85,23 +91,29 @@ func initSampleData() {
 		Status:      "paid",
 		CreatedAt:   now,
 		UpdatedAt:   now,
-	})
+	}); err != nil {
+		fmt.Printf("Failed to create sample order: %v\n", err)
+	}
 
 	// Initialize sample carousels
-	carouselRepo.Create(&models.Carousel{
+	if err := carouselRepo.Create(&models.Carousel{
 		ImageURL:  "/static/carousel/banner1.jpg",
 		LinkURL:   "/product/1",
 		SortOrder: 1,
 		Title:     "春季大促",
 		Status:    "active",
-	})
+	}); err != nil {
+		fmt.Printf("Failed to create sample carousel: %v\n", err)
+	}
 
 	// Initialize sample announcements
-	announcementRepo.Create(&models.Announcement{
+	if err := announcementRepo.Create(&models.Announcement{
 		Title:     "春节放假通知",
 		Content:   "春节期间客服工作时间调整",
 		Status:    "active",
 		CreatedAt: now,
 		UpdatedAt: now,
-	})
+	}); err != nil {
+		fmt.Printf("Failed to create sample announcement: %v\n", err)
+	}
 }

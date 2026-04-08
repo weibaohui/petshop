@@ -97,7 +97,9 @@ type serverDependencies struct {
 // deps: optional dependencies for testing (signalChan and serverErrorHandler)
 func runWithDependencies(config *serverConfig, deps *serverDependencies) error {
 	// Initialize logger
-	logger.Init(config.logDir)
+	if err := logger.Init(config.logDir); err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
 
 	// Initialize database for cart persistence
 	if err := db.InitDB(config.dbPath); err != nil {
