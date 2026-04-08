@@ -16,6 +16,13 @@ type OrderRepository struct {
 	db *sql.DB
 }
 
+func (r *OrderRepository) ensureDB() error {
+	if r == nil || r.db == nil {
+		return errOrderRepositoryDBNotInitialized
+	}
+	return nil
+}
+
 // NewOrderRepository creates a new OrderRepository
 func NewOrderRepository() *OrderRepository {
 	return &OrderRepository{db: GetDB()}
@@ -24,13 +31,6 @@ func NewOrderRepository() *OrderRepository {
 // NewOrderRepositoryWithDB creates a new OrderRepository with a specific database instance
 func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
-}
-
-func (r *OrderRepository) ensureDB() error {
-	if r == nil || r.db == nil {
-		return errOrderRepositoryDBNotInitialized
-	}
-	return nil
 }
 
 // GetAll returns all orders
@@ -99,7 +99,7 @@ func (r *OrderRepository) Create(o *models.Order) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 
