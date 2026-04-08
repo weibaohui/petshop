@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"petshop/internal/models"
@@ -10,6 +11,15 @@ import (
 // OrderRepository handles order database operations
 type OrderRepository struct {
 	db *sql.DB
+}
+
+var errOrderRepositoryDBNotInitialized = errors.New("order repository database is not initialized")
+
+func (r *OrderRepository) ensureDB() error {
+	if r == nil || r.db == nil {
+		return errOrderRepositoryDBNotInitialized
+	}
+	return nil
 }
 
 // NewOrderRepository creates a new OrderRepository
@@ -24,6 +34,9 @@ func NewOrderRepositoryWithDB(db *sql.DB) *OrderRepository {
 
 // GetAll returns all orders
 func (r *OrderRepository) GetAll() ([]*models.Order, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders ORDER BY id DESC`)
@@ -37,6 +50,9 @@ func (r *OrderRepository) GetAll() ([]*models.Order, error) {
 
 // GetByID returns an order by ID with its items
 func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	o := &models.Order{}
 
 	err := r.db.QueryRow(`
@@ -59,6 +75,9 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 
 // GetByStatus returns orders filtered by status
 func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
+	if err := r.ensureDB(); err != nil {
+		return nil, err
+	}
 	rows, err := r.db.Query(`
 		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders WHERE status = ? ORDER BY id DESC`, status)
