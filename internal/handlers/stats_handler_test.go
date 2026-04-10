@@ -196,17 +196,17 @@ func TestGetWeekStart(t *testing.T) {
 		{
 			name:     "Sunday",
 			input:    time.Date(2024, 1, 21, 10, 0, 0, 0, time.Local), // Sunday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Previous Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Previous Monday
 		},
 		{
 			name:     "Wednesday",
 			input:    time.Date(2024, 1, 17, 10, 0, 0, 0, time.Local), // Wednesday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Monday
 		},
 		{
 			name:     "Saturday",
 			input:    time.Date(2024, 1, 20, 10, 0, 0, 0, time.Local), // Saturday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Monday
 		},
 	}
 
@@ -247,9 +247,9 @@ func TestGetSalesStats_Handler(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:           "invalid period falls through",
+			name:           "invalid period returns error",
 			queryString:    "?period=year",
-			wantStatusCode: http.StatusOK,
+			wantStatusCode: http.StatusBadRequest,
 		},
 	}
 
@@ -262,6 +262,10 @@ func TestGetSalesStats_Handler(t *testing.T) {
 			GetSalesStats(w, req)
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
+
+			if tt.wantStatusCode >= 400 {
+				return
+			}
 
 			var response []models.SalesStat
 			err := json.NewDecoder(w.Body).Decode(&response)

@@ -54,6 +54,9 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 			stat.Date = monthStart.Format("2006-01")
 			stats = append(stats, stat)
 		}
+	default:
+		http.Error(w, "invalid period", http.StatusBadRequest)
+		return
 	}
 
 	json.NewEncoder(w).Encode(stats)
