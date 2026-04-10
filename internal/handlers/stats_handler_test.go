@@ -247,9 +247,9 @@ func TestGetSalesStats_Handler(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name:           "invalid period falls through",
+			name:           "invalid period returns error",
 			queryString:    "?period=year",
-			wantStatusCode: http.StatusOK,
+			wantStatusCode: http.StatusBadRequest,
 		},
 	}
 
@@ -262,6 +262,10 @@ func TestGetSalesStats_Handler(t *testing.T) {
 			GetSalesStats(w, req)
 
 			assert.Equal(t, tt.wantStatusCode, w.Code)
+
+			if tt.wantStatusCode >= 400 {
+				return
+			}
 
 			var response []models.SalesStat
 			err := json.NewDecoder(w.Body).Decode(&response)
