@@ -320,6 +320,34 @@ func TestPetFilterStruct(t *testing.T) {
 	})
 }
 
+func TestIsValidStatusTransition(t *testing.T) {
+	t.Run("available can transition to pending", func(t *testing.T) {
+		assert.True(t, IsValidStatusTransition(StatusAvailable, StatusPending))
+	})
+
+	t.Run("available can transition to sold", func(t *testing.T) {
+		assert.True(t, IsValidStatusTransition(StatusAvailable, StatusSold))
+	})
+
+	t.Run("pending can transition to sold", func(t *testing.T) {
+		assert.True(t, IsValidStatusTransition(StatusPending, StatusSold))
+	})
+
+	t.Run("sold cannot transition to any status", func(t *testing.T) {
+		assert.False(t, IsValidStatusTransition(StatusSold, StatusAvailable))
+		assert.False(t, IsValidStatusTransition(StatusSold, StatusPending))
+		assert.False(t, IsValidStatusTransition(StatusSold, StatusSold))
+	})
+
+	t.Run("pending cannot transition to available", func(t *testing.T) {
+		assert.False(t, IsValidStatusTransition(StatusPending, StatusAvailable))
+	})
+
+	t.Run("invalid from status returns false", func(t *testing.T) {
+		assert.False(t, IsValidStatusTransition(PetStatus("unknown"), StatusSold))
+	})
+}
+
 func TestCategoryStruct(t *testing.T) {
 	t.Run("Category JSON serialization and deserialization", func(t *testing.T) {
 		category := Category{
