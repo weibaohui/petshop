@@ -196,17 +196,17 @@ func TestGetWeekStart(t *testing.T) {
 		{
 			name:     "Sunday",
 			input:    time.Date(2024, 1, 21, 10, 0, 0, 0, time.Local), // Sunday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Previous Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Previous Monday
 		},
 		{
 			name:     "Wednesday",
 			input:    time.Date(2024, 1, 17, 10, 0, 0, 0, time.Local), // Wednesday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Monday
 		},
 		{
 			name:     "Saturday",
 			input:    time.Date(2024, 1, 20, 10, 0, 0, 0, time.Local), // Saturday
-			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local), // Monday
+			expected: time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local),  // Monday
 		},
 	}
 
