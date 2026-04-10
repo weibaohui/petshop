@@ -369,6 +369,18 @@ func setupRoutes(mux *http.ServeMux) {
 	// Register health check endpoint
 	registerRoute(mux, "/health", handlers.HealthCheck)
 
+	// Register version endpoint
+	mux.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		if !requireMethod(w, r, http.MethodGet) {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"version": "1.0.0",
+			"name":    "PetShop API",
+		})
+	})
+
 	// Swagger UI route
 	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 }
