@@ -103,7 +103,7 @@ func (r *OrderRepository) Create(o *models.Order) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 
