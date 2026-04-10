@@ -73,7 +73,7 @@ func ListUsers(w http.ResponseWriter, r *http.Request) {
 	for _, u := range users {
 		userList = append(userList, u)
 	}
-	json.NewEncoder(w).Encode(userList)
+	_ = json.NewEncoder(w).Encode(userList)
 }
 
 // GetUser handles GET /api/admin/user?id=<id> and returns the user.
@@ -104,7 +104,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	defer userMu.RUnlock()
 
 	if u, ok := users[id]; ok {
-		json.NewEncoder(w).Encode(u)
+		_ = json.NewEncoder(w).Encode(u)
 		return
 	}
 	http.Error(w, "user not found", http.StatusNotFound)
@@ -150,7 +150,7 @@ func UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.Status = req.Status
-	json.NewEncoder(w).Encode(u)
+	_ = json.NewEncoder(w).Encode(u)
 }
 
 // ResetUserPassword handles POST /api/admin/user/reset-password and resets the user password.
@@ -190,7 +190,7 @@ func ResetUserPassword(w http.ResponseWriter, r *http.Request) {
 	// In real app, send reset email or generate new password
 	// Simplified: return success message
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"message":  fmt.Sprintf("密码已重置，用户%s的新密码已发送至邮箱", u.Username),
 		"password": "reset123456",
 	})

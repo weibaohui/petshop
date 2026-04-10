@@ -33,7 +33,7 @@ func ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(announcements)
+	_ = json.NewEncoder(w).Encode(announcements)
 }
 
 // CreateAnnouncement handles POST /api/admin/announcements and creates a new announcement.
@@ -70,7 +70,7 @@ func CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(a)
+	_ = json.NewEncoder(w).Encode(a)
 }
 
 // UpdateAnnouncement handles PUT /api/admin/announcement and updates an existing announcement.
@@ -109,7 +109,7 @@ func UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(existing)
+	_ = json.NewEncoder(w).Encode(existing)
 }
 
 // DeleteAnnouncement handles DELETE /api/admin/announcement?id=<id> and deletes the announcement.
@@ -136,5 +136,5 @@ func DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
 }

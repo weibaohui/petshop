@@ -164,7 +164,7 @@ func TestAnnouncementRepository_GetAll_Error(t *testing.T) {
 	t.Cleanup(ResetForTesting)
 
 	repo := NewAnnouncementRepository()
-	Close() // Close db to force error
+	_ = Close() // Close db to force error
 
 	_, err = repo.GetAll()
 	assert.Error(t, err)
@@ -301,7 +301,7 @@ func TestAnnouncementRepository_GetActive_Error(t *testing.T) {
 	t.Cleanup(ResetForTesting)
 
 	repo := NewAnnouncementRepository()
-	Close() // Close db to force error
+	_ = Close() // Close db to force error
 
 	_, err = repo.GetActive()
 	assert.Error(t, err)

@@ -17,18 +17,18 @@ func resetCarousels() {
 	// Clear existing carousels
 	carousels, _ := carouselRepo.GetAll()
 	for _, c := range carousels {
-		carouselRepo.Delete(c.ID)
+		_ = carouselRepo.Delete(c.ID)
 	}
 
 	// Create test carousels
-	carouselRepo.Create(&models.Carousel{
+	_ = carouselRepo.Create(&models.Carousel{
 		ImageURL:  "https://example.com/static/carousel/banner1.jpg",
 		LinkURL:   "https://example.com/product/1",
 		SortOrder: 1,
 		Title:     "春季大促",
 		Status:    "active",
 	})
-	carouselRepo.Create(&models.Carousel{
+	_ = carouselRepo.Create(&models.Carousel{
 		ImageURL:  "https://example.com/static/carousel/banner2.jpg",
 		LinkURL:   "https://example.com/product/2",
 		SortOrder: 2,

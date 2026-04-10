@@ -24,7 +24,7 @@ func APITokenAuthMiddleware(next http.Handler) http.Handler {
 		if authHeader == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "unauthorized: missing authorization header"}`))
+			_, _ = w.Write([]byte(`{"error": "unauthorized: missing authorization header"}`))
 			return
 		}
 
@@ -37,14 +37,14 @@ func APITokenAuthMiddleware(next http.Handler) http.Handler {
 		} else {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "unauthorized: invalid authorization format, use 'Bearer token' or 'Token token'"}`))
+			_, _ = w.Write([]byte(`{"error": "unauthorized: invalid authorization format, use 'Bearer token' or 'Token token'"}`))
 			return
 		}
 
 		if tokenString == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "unauthorized: invalid token format"}`))
+			_, _ = w.Write([]byte(`{"error": "unauthorized: invalid token format"}`))
 			return
 		}
 
@@ -56,7 +56,7 @@ func APITokenAuthMiddleware(next http.Handler) http.Handler {
 		if !valid {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "unauthorized: invalid or expired token"}`))
+			_, _ = w.Write([]byte(`{"error": "unauthorized: invalid or expired token"}`))
 			return
 		}
 

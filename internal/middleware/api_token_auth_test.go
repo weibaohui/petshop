@@ -133,7 +133,7 @@ func TestAPITokenAuthMiddleware_BearerTokenSuccess(t *testing.T) {
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedContext = r.Context()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success": true}`))
+		_, _ = w.Write([]byte(`{"success": true}`))
 	})
 
 	middleware := APITokenAuthMiddleware(testHandler)

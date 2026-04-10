@@ -17,7 +17,7 @@ func resetInventoryData(t *testing.T) {
 	resetAdminData(t)
 
 	// Add additional product for deleted status test
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "deleted product",
 		Description: "已删除商品",
 		Category:    "其他",

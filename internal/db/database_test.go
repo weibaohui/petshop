@@ -8,7 +8,7 @@ import (
 )
 
 func resetDBState() {
-	Close()
+	_ = Close()
 	db = nil
 	dbInited = false
 	dbErr = nil

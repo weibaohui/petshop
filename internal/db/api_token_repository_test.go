@@ -26,7 +26,7 @@ func setupTestDBForAPITokens(t *testing.T) func() {
 
 	// Cleanup function
 	return func() {
-		Close()
+		_ = Close()
 		os.Remove(testDBPath)
 		ResetForTesting()
 	}

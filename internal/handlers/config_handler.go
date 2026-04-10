@@ -39,7 +39,7 @@ func GetSystemConfigs(w http.ResponseWriter, r *http.Request) {
 	for k, v := range systemConfigs {
 		configs = append(configs, models.SystemConfig{Key: k, Value: v})
 	}
-	json.NewEncoder(w).Encode(configs)
+	_ = json.NewEncoder(w).Encode(configs)
 }
 
 // SetSystemConfig handles POST /api/admin/config and sets a system configuration value.
@@ -88,5 +88,5 @@ func SetSystemConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "config updated"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "config updated"})
 }

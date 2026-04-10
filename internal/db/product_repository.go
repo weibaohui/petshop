@@ -51,7 +51,9 @@ func (r *ProductRepository) GetByID(id int64) (*models.Product, error) {
 	}
 
 	if imagesJSON != "" {
-		json.Unmarshal([]byte(imagesJSON), &p.Images)
+		if err := json.Unmarshal([]byte(imagesJSON), &p.Images); err != nil {
+			return nil, err
+		}
 	}
 	return p, nil
 }
@@ -137,7 +139,9 @@ func (r *ProductRepository) scanProducts(rows *sql.Rows) ([]*models.Product, err
 		}
 
 		if imagesJSON != "" {
-			json.Unmarshal([]byte(imagesJSON), &p.Images)
+			if err := json.Unmarshal([]byte(imagesJSON), &p.Images); err != nil {
+				return nil, err
+			}
 		}
 		products = append(products, p)
 	}

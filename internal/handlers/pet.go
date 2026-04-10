@@ -251,7 +251,7 @@ func ListPets(w http.ResponseWriter, r *http.Request) {
 		"total":     pagedPage.Total,
 	})
 
-	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
+	_ = json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
 
 // GetPet returns a single pet by ID
@@ -270,14 +270,14 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
 		return
 	}
 
 	var targetID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
 
@@ -285,7 +285,7 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 	cacheKey := cache.GetPetKey(targetID)
 	if cached, found := petCache.Get(cacheKey); found {
 		petLogger.Debug("cache hit", map[string]interface{}{"id": targetID})
-		json.NewEncoder(w).Encode(cached)
+		_ = json.NewEncoder(w).Encode(cached)
 		return
 	}
 
@@ -296,12 +296,12 @@ func GetPet(w http.ResponseWriter, r *http.Request) {
 		if pet.ID == targetID {
 			// Store in cache
 			petCache.Set(cacheKey, pet)
-			json.NewEncoder(w).Encode(pet)
+			_ = json.NewEncoder(w).Encode(pet)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // DeletePet deletes a pet by ID
@@ -320,14 +320,14 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
 		return
 	}
 
 	var targetID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
 
@@ -342,12 +342,12 @@ func DeletePet(w http.ResponseWriter, r *http.Request) {
 			petCache.Delete(cache.GetPetKey(targetID))
 			petLogger.Info("pet deleted", map[string]interface{}{"id": targetID})
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(deletedPet)
+			_ = json.NewEncoder(w).Encode(deletedPet)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // SearchPets searches pets by name with pagination
@@ -391,7 +391,7 @@ func SearchPets(w http.ResponseWriter, r *http.Request) {
 		result[i] = item.(models.Pet)
 	}
 
-	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
+	_ = json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
 
 // containsIgnoreCase checks if s contains substr, case-insensitively.
@@ -419,20 +419,20 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
 
 	var pet models.Pet
 	if err := json.Unmarshal(body, &pet); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON format"})
 		return
 	}
 
 	if pet.ID == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
 		return
 	}
 
@@ -442,14 +442,14 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 		var pathID int64
 		if _, err := fmt.Sscanf(pathIDStr, "%d", &pathID); err == nil && pathID != pet.ID {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "path id does not match body id"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "path id does not match body id"})
 			return
 		}
 	}
 
 	if pet.Name == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "name is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "name is required"})
 		return
 	}
 
@@ -460,7 +460,7 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			"type": pet.Type,
 		})
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid characters in input"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid characters in input"})
 		return
 	}
 
@@ -472,7 +472,7 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			// Validate input only if the pet exists
 			if errs := validator.ValidatePet(pet.Name, pet.Type, pet.Status); errs.HasErrors() {
 				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{"error": errs.Error()})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": errs.Error()})
 				return
 			}
 
@@ -490,13 +490,13 @@ func UpdatePet(w http.ResponseWriter, r *http.Request) {
 			petCache.Delete(cache.GetPetKey(pet.ID))
 			petLogger.Info("pet updated", map[string]interface{}{"id": pet.ID})
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pets[i])
+			_ = json.NewEncoder(w).Encode(pets[i])
 			return
 		}
 	}
 
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // AddPetPhoto adds a photo to a pet
@@ -506,13 +506,13 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
 		return
 	}
 	var targetID int64
 	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
 
@@ -521,20 +521,20 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
 		return
 	}
 
 	// Validate URL
 	if req.URL == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "url is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "url is required"})
 		return
 	}
 
 	if !validator.ValidateURL(req.URL) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid url format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid url format"})
 		return
 	}
 
@@ -544,7 +544,7 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 			"url": req.URL,
 		})
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid url"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid url"})
 		return
 	}
 
@@ -557,18 +557,18 @@ func AddPetPhoto(w http.ResponseWriter, r *http.Request) {
 				if existingUrl == req.URL {
 					// URL already exists, return current list without modification
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(pets[i].PhotoUrls)
+					_ = json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 					return
 				}
 			}
 			pets[i].PhotoUrls = append(pets[i].PhotoUrls, req.URL)
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pets[i].PhotoUrls)
+			_ = json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // DeletePetPhoto deletes a photo from a pet
@@ -578,20 +578,20 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
 		return
 	}
 	var targetID int64
 	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
 
 	urlStr := r.URL.Query().Get("url")
 	if urlStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "url parameter is required"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "url parameter is required"})
 		return
 	}
 
@@ -604,17 +604,17 @@ func DeletePetPhoto(w http.ResponseWriter, r *http.Request) {
 				if p == urlStr {
 					pets[i].PhotoUrls = append(pets[i].PhotoUrls[:j], pets[i].PhotoUrls[j+1:]...)
 					w.WriteHeader(http.StatusOK)
-					json.NewEncoder(w).Encode(pets[i].PhotoUrls)
+					_ = json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 					return
 				}
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(pets[i].PhotoUrls)
+			_ = json.NewEncoder(w).Encode(pets[i].PhotoUrls)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // GetPetPhotos returns photos for a pet
@@ -627,24 +627,24 @@ func GetPetPhotos(w http.ResponseWriter, r *http.Request) {
 	pathParts := strings.Split(strings.TrimSuffix(r.URL.Path, "/"), "/")
 	if len(pathParts) < 4 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid path"})
 		return
 	}
 	var targetID int64
 	if _, err := fmt.Sscanf(pathParts[3], "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
 		return
 	}
 
 	for _, pet := range pets {
 		if pet.ID == targetID {
-			json.NewEncoder(w).Encode(pet.PhotoUrls)
+			_ = json.NewEncoder(w).Encode(pet.PhotoUrls)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
 }
 
 // PetPhotoHandler routes photo-related requests
@@ -665,13 +665,13 @@ func PetPhotoHandler(w http.ResponseWriter, r *http.Request) {
 // GetCacheStats returns cache statistics
 func GetCacheStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(petCache.Stats())
+	_ = json.NewEncoder(w).Encode(petCache.Stats())
 }
 
 // GetCacheHitRate returns the cache hit rate
 func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"hit_rate": petCache.HitRate(),
 	})
 }
@@ -686,7 +686,7 @@ func GetCacheHitRate(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/categories [get]
 func GetCategories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.Categories())
+	_ = json.NewEncoder(w).Encode(models.Categories())
 }
 
 // FilterPets filters pets by multiple criteria
@@ -723,7 +723,7 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 		minPrice, err = strconv.ParseFloat(minPriceStr, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid minPrice"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid minPrice"})
 			return
 		}
 		hasMinPrice = true
@@ -733,7 +733,7 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 		maxPrice, err = strconv.ParseFloat(maxPriceStr, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid maxPrice"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid maxPrice"})
 			return
 		}
 		hasMaxPrice = true
@@ -790,5 +790,5 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 		"total":  pagedPage.Total,
 	})
 
-	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
+	_ = json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }

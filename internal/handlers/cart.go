@@ -53,7 +53,7 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 
 	cart := calculateCart(userID, items)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart retrieved", Cart: cart})
+	_ = json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart retrieved", Cart: cart})
 }
 
 // AddToCart handles POST /api/cart and adds an item to the cart
@@ -121,7 +121,7 @@ func AddToCart(w http.ResponseWriter, r *http.Request) {
 	cart := calculateCart(userID, items)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Item added to cart", Cart: cart})
+	_ = json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Item added to cart", Cart: cart})
 }
 
 // UpdateCartItem handles PUT /api/cart and updates a cart item quantity
@@ -209,7 +209,7 @@ func UpdateCartItem(w http.ResponseWriter, r *http.Request) {
 	}
 	cart := calculateCart(userID, items)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart item updated", Cart: cart})
+	_ = json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart item updated", Cart: cart})
 }
 
 // DeleteCartItem handles DELETE /api/cart and removes items from the cart
@@ -284,7 +284,7 @@ func DeleteCartItem(w http.ResponseWriter, r *http.Request) {
 
 	cart := calculateCart(userID, remainingItems)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Items deleted", Cart: cart})
+	_ = json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Items deleted", Cart: cart})
 }
 
 // ClearCart handles DELETE /api/cart/clear and removes all items from the user's cart
@@ -303,7 +303,7 @@ func ClearCart(w http.ResponseWriter, r *http.Request) {
 
 	cart := calculateCart(userID, []*models.CartItem{})
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart cleared", Cart: cart})
+	_ = json.NewEncoder(w).Encode(models.CartResponse{Success: true, Message: "Cart cleared", Cart: cart})
 }
 
 // calculateCart calculates total price and total items for a cart (issue #4: full data copy)

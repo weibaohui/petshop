@@ -64,7 +64,7 @@ func ListCarousels(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(carousels)
+	_ = json.NewEncoder(w).Encode(carousels)
 }
 
 // CreateCarousel handles POST /api/admin/carousels and creates a new carousel.
@@ -145,7 +145,7 @@ func CreateCarousel(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(c)
+	_ = json.NewEncoder(w).Encode(c)
 }
 
 // UpdateCarousel handles PUT /api/admin/carousel and updates an existing carousel.
@@ -263,7 +263,7 @@ func UpdateCarousel(w http.ResponseWriter, r *http.Request) {
 		"status": existing.Status,
 	})
 
-	json.NewEncoder(w).Encode(existing)
+	_ = json.NewEncoder(w).Encode(existing)
 }
 
 // DeleteCarousel handles DELETE /api/admin/carousel?id=<id> and deletes the carousel.
@@ -306,5 +306,5 @@ func DeleteCarousel(w http.ResponseWriter, r *http.Request) {
 	})
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "deleted"})
 }

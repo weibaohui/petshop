@@ -61,7 +61,7 @@ func ListOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(orderList)
+	_ = json.NewEncoder(w).Encode(orderList)
 }
 
 // GetOrder handles GET /api/admin/order?id=<id> and returns the order.
@@ -94,7 +94,7 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(o)
+	_ = json.NewEncoder(w).Encode(o)
 }
 
 // UpdateOrderStatus handles PUT /api/admin/order and updates the order status.
@@ -145,7 +145,7 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(o)
+	_ = json.NewEncoder(w).Encode(o)
 }
 
 // ProcessRefund handles POST /api/admin/order/refund and processes a refund for an order.
@@ -217,5 +217,5 @@ func ProcessRefund(w http.ResponseWriter, r *http.Request) {
 	o.UpdatedAt = time.Now()
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "refund processed"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "refund processed"})
 }

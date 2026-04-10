@@ -85,7 +85,7 @@ func resetProductData(t *testing.T) {
 	setupProductTestDB(t)
 
 	// Create test products
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -94,7 +94,7 @@ func resetProductData(t *testing.T) {
 		Status:      "on_sale",
 		Images:      []string{"/static/images/dog_food.jpg"},
 	})
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -672,7 +672,7 @@ func TestDeleteProduct_Handler_WithPendingOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a pending order for product 1
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -693,7 +693,7 @@ func TestDeleteProduct_Handler_WithPaidOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a paid order for product 1
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -714,7 +714,7 @@ func TestDeleteProduct_Handler_WithShippedOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a shipped order for product 1
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -735,7 +735,7 @@ func TestDeleteProduct_Handler_CanDeleteWithDeliveredOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a delivered order for product 1 (should not block deletion)
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -756,7 +756,7 @@ func TestDeleteProduct_Handler_CanDeleteWithCancelledOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a cancelled order for product 1 (should not block deletion)
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},
@@ -777,7 +777,7 @@ func TestDeleteProduct_Handler_CanDeleteWithRefundedOrder(t *testing.T) {
 	resetProductData(t)
 
 	// Create a refunded order for product 1 (should not block deletion)
-	orderRepo.Create(&models.Order{
+	_ = orderRepo.Create(&models.Order{
 		UserID: 1,
 		Products: []models.OrderItem{
 			{ProductID: 1, ProductName: "狗粮 10kg", Price: 299.00, Quantity: 1, Subtotal: 299.00},

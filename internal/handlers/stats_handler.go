@@ -59,7 +59,7 @@ func GetSalesStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(stats)
+	_ = json.NewEncoder(w).Encode(stats)
 }
 
 // calculateDayStat calculates sales statistics for a given date.
@@ -170,5 +170,5 @@ func GetHotProducts(w http.ResponseWriter, r *http.Request) {
 		hotList = hotList[:limit]
 	}
 
-	json.NewEncoder(w).Encode(hotList)
+	_ = json.NewEncoder(w).Encode(hotList)
 }
