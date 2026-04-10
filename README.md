@@ -114,6 +114,7 @@ swag init -g cmd/server/main.go --parseDependency --parseInternal
 | **管理-库存** | GET `/api/admin/inventory/logs` | 库存日志 |
 | **管理-库存** | GET `/api/admin/inventory/alerts` | 库存预警 |
 | **系统** | GET `/health` | 健康检查 |
+| **系统** | GET `/api/version` | 获取 API 版本信息 |
 
 ### 查询参数
 

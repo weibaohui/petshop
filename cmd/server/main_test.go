@@ -133,6 +133,9 @@ func TestRouteRegistration(t *testing.T) {
 		{"ListAnnouncements GET", "GET", "/api/admin/announcements", http.StatusOK, "", true},
 		{"GetSystemConfigs GET", "GET", "/api/admin/configs", http.StatusOK, "", true},
 
+		// Version endpoint
+		{"Version GET", "GET", "/api/version", http.StatusOK, "", false},
+
 		// Error page
 		{"ErrorPage GET", "GET", "/error", http.StatusInternalServerError, "", false},
 	}
@@ -564,6 +567,7 @@ func TestSetupRoutes(t *testing.T) {
 		{"/api/admin/announcement"},
 		{"/api/admin/configs"},
 		{"/api/admin/config"},
+		{"/api/version"},
 		{"/error"},
 	}
 
@@ -692,6 +696,44 @@ func TestCacheStop(t *testing.T) {
 
 	// Stop should not panic
 	cache.Stop()
+}
+
+// TestVersionEndpoint tests the version API endpoint
+func TestVersionEndpoint(t *testing.T) {
+	handler, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	t.Run("GET returns version info", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/version", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, rr.Code)
+		}
+
+		contentType := rr.Header().Get("Content-Type")
+		if !strings.Contains(contentType, "application/json") {
+			t.Errorf("Expected JSON content type, got %q", contentType)
+		}
+
+		body := rr.Body.String()
+		if !strings.Contains(body, `"version"`) {
+			t.Errorf("Expected version in body, got %q", body)
+		}
+	})
+
+	t.Run("POST returns method not allowed", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/version", nil)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+		}
+	})
 }
 
 // TestErrorPageContent tests error page HTML content

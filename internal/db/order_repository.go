@@ -40,7 +40,7 @@ func (r *OrderRepository) GetAll() ([]*models.Order, error) {
 		return nil, err
 	}
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
+		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
@@ -56,13 +56,18 @@ func (r *OrderRepository) GetByID(id int64) (*models.Order, error) {
 		return nil, err
 	}
 	o := &models.Order{}
+	var refundReason sql.NullString
 
 	err := r.db.QueryRow(`
-		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
+		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders WHERE id = ?`, id).Scan(
-		&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt)
+		&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &refundReason, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		return nil, err
+	}
+
+	if refundReason.Valid {
+		o.RefundReason = &refundReason.String
 	}
 
 	// Get order items
@@ -81,7 +86,7 @@ func (r *OrderRepository) GetByStatus(status string) ([]*models.Order, error) {
 		return nil, err
 	}
 	rows, err := r.db.Query(`
-		SELECT id, user_id, total_amount, status, COALESCE(refund_reason, ''), created_at, updated_at
+		SELECT id, user_id, total_amount, status, refund_reason, created_at, updated_at
 		FROM orders WHERE status = ? ORDER BY id DESC`, status)
 	if err != nil {
 		return nil, err
@@ -262,8 +267,12 @@ func (r *OrderRepository) scanOrders(rows *sql.Rows) ([]*models.Order, error) {
 	// First, collect all orders
 	for rows.Next() {
 		o := &models.Order{}
-		if err := rows.Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.RefundReason, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		var refundReason sql.NullString
+		if err := rows.Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &refundReason, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, err
+		}
+		if refundReason.Valid {
+			o.RefundReason = &refundReason.String
 		}
 		orders = append(orders, o)
 		orderIDs = append(orderIDs, o.ID)

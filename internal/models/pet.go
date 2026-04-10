@@ -68,6 +68,21 @@ type PetFilter struct {
 	PageSize int     `json:"pageSize"`
 }
 
+// IsValidStatusTransition checks if a pet status transition is valid.
+// Valid transitions: available -> pending, available -> sold, pending -> sold.
+func IsValidStatusTransition(from, to PetStatus) bool {
+	switch from {
+	case StatusAvailable:
+		return to == StatusPending || to == StatusSold
+	case StatusPending:
+		return to == StatusSold
+	case StatusSold:
+		return false
+	default:
+		return false
+	}
+}
+
 // Categories returns all available pet categories
 func Categories() []Category {
 	return []Category{
