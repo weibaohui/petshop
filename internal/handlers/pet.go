@@ -792,3 +792,60 @@ func FilterPets(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(pagination.NewPagedResponse(result, pagedPage))
 }
+
+func RatePet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		return
+	}
+
+	var targetID int64
+	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		return
+	}
+
+	ratingStr := r.URL.Query().Get("rating")
+	if ratingStr == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "rating is required"})
+		return
+	}
+
+	var rating int
+	if _, err := fmt.Sscanf(ratingStr, "%d", &rating); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid rating format"})
+		return
+	}
+
+	if rating < 1 || rating > 5 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "rating must be between 1 and 5"})
+		return
+	}
+
+	petsMu.Lock()
+	defer petsMu.Unlock()
+
+	for i, pet := range pets {
+		if pet.ID == targetID {
+			pets[i].Rating = rating
+			petCache.Delete(cache.GetPetKey(targetID))
+			petLogger.Info("pet rated", map[string]interface{}{
+				"id":     targetID,
+				"rating": rating,
+			})
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(pets[i])
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(map[string]string{"error": "pet not found"})
+}
