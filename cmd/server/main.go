@@ -333,6 +333,7 @@ func setupRoutes(mux *http.ServeMux) {
 		}
 	})
 	mux.HandleFunc("/api/pet/search", handlers.SearchPets)
+	mux.HandleFunc("/api/pet/rate", handlers.RatePet)
 	mux.HandleFunc("/api/pet/cache/stats", handlers.GetCacheStats)
 	mux.HandleFunc("/api/pet/cache/hitrate", handlers.GetCacheHitRate)
 	mux.HandleFunc("/api/pet/", handlePetPath)

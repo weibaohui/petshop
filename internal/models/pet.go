@@ -46,6 +46,8 @@ type Pet struct {
 	HealthStatus string `json:"healthStatus"`
 	// VaccinationRecords contains vaccination information
 	VaccinationRecords []VaccinationRecord `json:"vaccinationRecords"`
+	// Rating is the customer rating for the pet (1-5 stars)
+	Rating int `json:"rating"`
 	// CreatedAt is when the pet was added
 	CreatedAt string `json:"createdAt"`
 }
