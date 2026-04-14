@@ -317,7 +317,7 @@ func TestUpdateAPITokenStatus_ActivateToken(t *testing.T) {
 	require.NoError(t, err)
 
 	// Manually update status to disabled
-	repo.UpdateStatus(token.ID, "disabled")
+	_ = repo.UpdateStatus(token.ID, "disabled")
 
 	reqBody := `{"status":"active"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/tokens?id=1", strings.NewReader(reqBody))
@@ -575,7 +575,7 @@ func TestAPITokenAuth_WithCreatedToken(t *testing.T) {
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success": true}`))
+		_, _ = w.Write([]byte(`{"success": true}`))
 	})
 
 	authMiddleware := middleware.APITokenAuthMiddleware(testHandler)

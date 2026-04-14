@@ -55,7 +55,7 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // checkDatabase verifies database connectivity by executing a simple query

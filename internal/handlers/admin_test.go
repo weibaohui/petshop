@@ -238,7 +238,7 @@ func resetAdminData(t *testing.T) *sql.DB {
 
 	// 初始化测试数据到数据库
 	// 产品 1
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -248,7 +248,7 @@ func resetAdminData(t *testing.T) *sql.DB {
 		Images:      []string{"/static/images/dog_food.jpg"},
 	})
 	// 产品 2
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -278,7 +278,7 @@ func resetAdminData(t *testing.T) *sql.DB {
 	fmt.Printf("After Create: order_items count = %d\n", itemCount)
 
 	// 轮播图 1
-	carouselRepo.Create(&models.Carousel{
+	_ = carouselRepo.Create(&models.Carousel{
 		ImageURL:  "https://example.com/static/carousel/banner1.jpg",
 		LinkURL:   "https://example.com/product/1",
 		SortOrder: 1,
@@ -287,7 +287,7 @@ func resetAdminData(t *testing.T) *sql.DB {
 	})
 
 	// 公告 1
-	announcementRepo.Create(&models.Announcement{
+	_ = announcementRepo.Create(&models.Announcement{
 		Title:   "春节放假通知",
 		Content: "春节期间客服工作时间调整",
 		Status:  "active",

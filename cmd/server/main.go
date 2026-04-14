@@ -342,7 +342,7 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`<!DOCTYPE html>
+		_, _ = w.Write([]byte(`<!DOCTYPE html>
 <html>
 <head><title>Error</title></head>
 <body>
@@ -376,7 +376,7 @@ func setupRoutes(mux *http.ServeMux) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"version": "1.0.0",
 			"name":    "PetShop API",
 		})
@@ -483,7 +483,7 @@ func setupOpenAPIRoutes(mux *http.ServeMux) {
 				"GET /api/open/categories - Get all categories",
 			},
 		}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	mux.Handle("/api/open", openAPIHandler)
 

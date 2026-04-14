@@ -31,7 +31,7 @@ func resetCartData(t *testing.T) {
 	setupTestDB(t)
 
 	// Create test products
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "狗粮 10kg",
 		Description: "优质狗粮",
 		Category:    "狗粮",
@@ -40,7 +40,7 @@ func resetCartData(t *testing.T) {
 		Status:      "on_sale",
 		Images:      []string{"/static/images/dog_food.jpg"},
 	})
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "猫粮 5kg",
 		Description: "天然猫粮",
 		Category:    "猫粮",
@@ -49,7 +49,7 @@ func resetCartData(t *testing.T) {
 		Status:      "on_sale",
 		Images:      []string{"/static/images/cat_food.jpg"},
 	})
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "缺货商品",
 		Description: "测试缺货",
 		Category:    "测试",
@@ -58,7 +58,7 @@ func resetCartData(t *testing.T) {
 		Status:      "on_sale",
 		Images:      []string{},
 	})
-	productRepo.Create(&models.Product{
+	_ = productRepo.Create(&models.Product{
 		Name:        "下架商品",
 		Description: "测试下架",
 		Category:    "测试",

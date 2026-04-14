@@ -27,7 +27,7 @@ func TestNewCartRepositoryWithDB(t *testing.T) {
 	resetDBState()
 	err := InitDB(":memory:")
 	require.NoError(t, err)
-	defer Close()
+	defer func() { _ = Close() }()
 
 	repo := NewCartRepositoryWithDB(GetDB())
 	assert.NotNil(t, repo)
@@ -105,7 +105,7 @@ func TestCartRepository_GetCartItems_Error(t *testing.T) {
 	t.Cleanup(resetDBState)
 
 	repo := NewCartRepository()
-	Close() // Close db to force error
+	_ = Close() // Close db to force error
 
 	_, err = repo.GetCartItems(1)
 	assert.Error(t, err)

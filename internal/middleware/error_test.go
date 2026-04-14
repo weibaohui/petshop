@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	logger.Init("")
+	_ = logger.Init("")
 }
 
 func TestRecoveryMiddleware_NoPanic(t *testing.T) {

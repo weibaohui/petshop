@@ -37,7 +37,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 					Message: "An internal error occurred. Please try again later.",
 					TraceID: traceID,
 				}
-				json.NewEncoder(w).Encode(resp)
+				_ = json.NewEncoder(w).Encode(resp)
 			}
 		}()
 		next.ServeHTTP(w, r)

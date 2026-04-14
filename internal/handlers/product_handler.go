@@ -51,7 +51,7 @@ func ListProducts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(products)
+	_ = json.NewEncoder(w).Encode(products)
 }
 
 // GetProduct handles GET /api/admin/product?id=<id> and returns the product.
@@ -83,7 +83,7 @@ func GetProduct(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "product not found", http.StatusNotFound)
 		return
 	}
-	json.NewEncoder(w).Encode(p)
+	_ = json.NewEncoder(w).Encode(p)
 }
 
 // CreateProduct handles POST /api/admin/products and creates a new product.
@@ -153,7 +153,7 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(p)
+	_ = json.NewEncoder(w).Encode(p)
 }
 
 // UpdateProduct handles PUT /api/admin/product and updates an existing product.
@@ -199,7 +199,7 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		if stockChange < 0 {
 			changeType = "out"
 		}
-		inventoryRepo.Create(&models.Inventory{
+		_ = inventoryRepo.Create(&models.Inventory{
 			ProductID:   p.ID,
 			ChangeType:  changeType,
 			Quantity:    abs(stockChange),
@@ -242,7 +242,7 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(p)
+	_ = json.NewEncoder(w).Encode(p)
 }
 
 // DeleteProduct handles DELETE /api/admin/product?id=<id> and marks a product as deleted.
@@ -297,5 +297,5 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "product deleted"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "product deleted"})
 }

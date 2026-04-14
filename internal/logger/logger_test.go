@@ -366,7 +366,7 @@ func TestConcurrency(t *testing.T) {
 // TestConcurrentPackageFunctions tests concurrent package-level functions
 func TestConcurrentPackageFunctions(t *testing.T) {
 	tempDir := t.TempDir()
-	Init(tempDir)
+	_ = Init(tempDir)
 
 	var wg sync.WaitGroup
 	numGoroutines := 5
@@ -604,7 +604,7 @@ func TestAccessFunction(t *testing.T) {
 	// Ensure Init() was called
 	if globalLogger == nil {
 		tempDir := t.TempDir()
-		Init(tempDir)
+		_ = Init(tempDir)
 	}
 
 	oldStdout := os.Stdout
@@ -643,7 +643,7 @@ func TestFatalSubprocess(t *testing.T) {
 
 	// This code runs in a subprocess and should exit
 	tempDir := t.TempDir()
-	Init(tempDir)
+	_ = Init(tempDir)
 	logger := New("fatal_test")
 	logger.Fatal("fatal message", map[string]interface{}{"test": true})
 }

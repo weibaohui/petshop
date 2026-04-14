@@ -326,7 +326,7 @@ func TestRecoveryMiddleware(t *testing.T) {
 	// Initialize logger for this test
 	tempDir := t.TempDir()
 	logger.ResetForTesting()
-	logger.Init(tempDir)
+	_ = logger.Init(tempDir)
 	defer logger.Close()
 	defer logger.ResetForTesting()
 
@@ -603,7 +603,7 @@ func TestDefaultConfig(t *testing.T) {
 // TestMiddlewareOrder tests that middleware executes in correct order
 func TestMiddlewareOrder(t *testing.T) {
 	tempDir := t.TempDir()
-	logger.Init(tempDir)
+	_ = logger.Init(tempDir)
 	defer logger.Close()
 
 	// Create a simple handler that records execution
@@ -764,7 +764,7 @@ func TestErrorPageContent(t *testing.T) {
 // BenchmarkRouteHandling benchmarks route handling performance
 func BenchmarkRouteHandling(b *testing.B) {
 	tempDir := b.TempDir()
-	logger.Init(tempDir)
+	_ = logger.Init(tempDir)
 	defer logger.Close()
 
 	dbPath := filepath.Join(tempDir, "bench.db")

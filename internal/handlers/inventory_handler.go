@@ -34,7 +34,7 @@ func ListInventoryLogs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(logs)
+	_ = json.NewEncoder(w).Encode(logs)
 }
 
 // GetInventoryAlerts handles GET /api/admin/inventory/alerts and returns products with low stock.
@@ -62,7 +62,7 @@ func GetInventoryAlerts(w http.ResponseWriter, r *http.Request) {
 			CurrentStock: p.Stock,
 		})
 	}
-	json.NewEncoder(w).Encode(alerts)
+	_ = json.NewEncoder(w).Encode(alerts)
 }
 
 // AdjustInventory handles POST /api/admin/inventory/adjust and adjusts product stock quantity.
@@ -129,5 +129,5 @@ func AdjustInventory(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Failed to record inventory log: %v\n", err)
 	}
 
-	json.NewEncoder(w).Encode(p)
+	_ = json.NewEncoder(w).Encode(p)
 }
