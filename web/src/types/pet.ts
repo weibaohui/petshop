@@ -19,6 +19,7 @@ export interface Pet {
   healthStatus: string;
   vaccinationRecords: VaccinationRecord[];
   createdAt: string;
+  voteCount?: number;
 }
 
 export interface Category {
@@ -53,3 +54,24 @@ export const StatusMap: Record<string, { text: string; color: string }> = {
   pending: { text: '已预订', color: 'orange' },
   sold: { text: '已售', color: 'red' },
 };
+
+export interface PetAllStar {
+  id: number;
+  petId: number;
+  pet: Pet;
+  voteCount: number;
+  electedAt: string;
+  period: string;
+}
+
+export interface VoteResponse {
+  message: string;
+  voteCount: number;
+  hasVoted: boolean;
+}
+
+export interface VoteStatus {
+  petId: number;
+  voteCount: number;
+  hasVoted: boolean;
+}

@@ -14,10 +14,11 @@ import {
   Slider,
   Alert,
 } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, StarFilled } from '@ant-design/icons';
 import { PetCard } from '../components/PetCard';
 import { getPets, getCategories } from '../api/pet';
-import type { Pet, Category, PetFilter } from '../types/pet';
+import { getCurrentAllStar } from '../api/vote';
+import type { Pet, Category, PetFilter, PetAllStar } from '../types/pet';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
@@ -36,12 +37,13 @@ export function HomePage() {
     page: 1,
     pageSize: PAGE_SIZE,
   });
-  // 临时存储价格滑块值，避免频繁触发请求
   const [tempPriceRange, setTempPriceRange] = useState<[number, number]>([0, 10000]);
+  const [allStar, setAllStar] = useState<PetAllStar | null>(null);
 
   useEffect(() => {
     fetchCategories();
     fetchPets();
+    fetchAllStar();
   }, []);
 
   useEffect(() => {
@@ -54,6 +56,15 @@ export function HomePage() {
       setCategories(data);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
+    }
+  };
+
+  const fetchAllStar = async () => {
+    try {
+      const star = await getCurrentAllStar();
+      setAllStar(star);
+    } catch (error) {
+      console.error('Failed to fetch all-star:', error);
     }
   };
 
@@ -168,6 +179,49 @@ export function HomePage() {
           精选优质宠物，陪伴你的每一天
         </Text>
       </div>
+
+      {/* Pet All-Star Section */}
+      {allStar && (
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px 0' }}>
+          <Card
+            style={{
+              background: 'linear-gradient(135deg, #fff1eb 0%, #ace0ff 100%)',
+              border: '2px solid #faad14',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+              <div
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid #faad14',
+                  flexShrink: 0,
+                }}
+              >
+                <img
+                  alt={allStar.pet.name}
+                  src={allStar.pet.photoUrls[0] || 'https://via.placeholder.com/120x120?text=No+Image'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <StarFilled style={{ color: '#faad14', fontSize: 24 }} />
+                  <Text strong style={{ fontSize: 16, color: '#faad14' }}>本期宠物全明星</Text>
+                </div>
+                <Title level={2} style={{ marginBottom: 8 }}>
+                  {allStar.pet.name}
+                </Title>
+                <Text type="secondary">
+                  {allStar.pet.breed} | 获得 {allStar.voteCount} 票
+                </Text>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Main Content */}
       <Content style={{ maxWidth: 1400, margin: '0 auto', padding: '24px', width: '100%' }}>

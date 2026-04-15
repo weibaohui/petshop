@@ -48,6 +48,8 @@ type Pet struct {
 	VaccinationRecords []VaccinationRecord `json:"vaccinationRecords"`
 	// Rating is the customer rating for the pet (1-5 stars)
 	Rating int `json:"rating"`
+	// VoteCount is the number of votes for this pet
+	VoteCount int `json:"voteCount"`
 	// CreatedAt is when the pet was added
 	CreatedAt string `json:"createdAt"`
 }
@@ -93,4 +95,22 @@ func Categories() []Category {
 		{ID: 3, Name: "鸟类"},
 		{ID: 4, Name: "其他"},
 	}
+}
+
+// Vote represents a vote for a pet
+type Vote struct {
+	ID        int64  `json:"id"`
+	PetID     int64  `json:"petId"`
+	UserID    int64  `json:"userId"`
+	CreatedAt string `json:"createdAt"`
+}
+
+// PetAllStar represents a pet that has been elected as Pet All-Star
+type PetAllStar struct {
+	ID        int64  `json:"id"`
+	PetID     int64  `json:"petId"`
+	Pet       *Pet   `json:"pet"`
+	VoteCount int    `json:"voteCount"`
+	ElectedAt string `json:"electedAt"`
+	Period    string `json:"period"`
 }

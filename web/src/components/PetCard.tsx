@@ -1,8 +1,10 @@
-import { Card, Tag, Typography, Button } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { Card, Tag, Typography, Button, message } from 'antd';
+import { EyeOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import type { Pet } from '../types/pet';
 import { StatusMap } from '../types/pet';
+import { voteForPet, getVoteStatus } from '../api/vote';
 
 const { Meta } = Card;
 const { Text } = Typography;
@@ -11,9 +13,47 @@ interface PetCardProps {
   pet: Pet;
 }
 
+const CURRENT_USER_ID = 1;
+
 export function PetCard({ pet }: PetCardProps) {
   const navigate = useNavigate();
   const status = StatusMap[pet.status] || { text: '未知', color: 'default' };
+  const [voteCount, setVoteCount] = useState(pet.voteCount || 0);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [voting, setVoting] = useState(false);
+
+  useEffect(() => {
+    checkVoteStatus();
+  }, [pet.id]);
+
+  const checkVoteStatus = async () => {
+    try {
+      const status = await getVoteStatus(pet.id, CURRENT_USER_ID);
+      setVoteCount(status.voteCount);
+      setHasVoted(status.hasVoted);
+    } catch (error) {
+      console.error('Failed to check vote status:', error);
+    }
+  };
+
+  const handleVote = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasVoted) {
+      message.warning('您已经为这只宠物投过票了');
+      return;
+    }
+    setVoting(true);
+    try {
+      const result = await voteForPet(pet.id, CURRENT_USER_ID);
+      setVoteCount(result.voteCount);
+      setHasVoted(result.hasVoted);
+      message.success('投票成功！');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '投票失败');
+    } finally {
+      setVoting(false);
+    }
+  };
 
   return (
     <Card
@@ -45,6 +85,16 @@ export function PetCard({ pet }: PetCardProps) {
         </div>
       }
       actions={[
+        <Button
+          type={hasVoted ? 'default' : 'primary'}
+          icon={hasVoted ? <StarFilled /> : <StarOutlined />}
+          onClick={handleVote}
+          loading={voting}
+          block
+          style={{ margin: '0 8px', width: 'calc(100% - 16px)', backgroundColor: hasVoted ? '#faad14' : undefined }}
+        >
+          {hasVoted ? `已投票 (${voteCount})` : `投票 (${voteCount})`}
+        </Button>,
         <Button
           type="primary"
           icon={<EyeOutlined />}

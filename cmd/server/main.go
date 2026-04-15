@@ -338,6 +338,29 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pet/cache/hitrate", handlers.GetCacheHitRate)
 	mux.HandleFunc("/api/pet/", handlePetPath)
 
+	// Vote routes
+	mux.HandleFunc("/api/vote", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			handlers.VoteForPet(w, r)
+		default:
+			methodNotAllowedJSON(w, "POST")
+		}
+	})
+	mux.HandleFunc("/api/vote/status", handlers.GetVoteStatus)
+	mux.HandleFunc("/api/vote/leaderboard", handlers.GetLeaderboard)
+	mux.HandleFunc("/api/allstar", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetCurrentAllStar(w, r)
+		case http.MethodPost:
+			handlers.ElectAllStar(w, r)
+		default:
+			methodNotAllowedJSON(w, "GET, POST")
+		}
+	})
+	mux.HandleFunc("/api/allstars", handlers.GetAllStars)
+
 	// Error page handler for non-API routes
 	mux.HandleFunc("/error", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
