@@ -13,7 +13,6 @@ import (
 
 	"petshop/internal/cache"
 	"petshop/internal/logger"
-	"petshop/internal/middleware"
 	"petshop/internal/models"
 	"petshop/internal/pagination"
 	"petshop/internal/validator"
@@ -164,16 +163,13 @@ var (
 	}
 	// petCache provides caching for pet data
 	petCache *cache.PetCache
-	// csrfProt provides CSRF protection for state-changing operations
-	csrfProt *middleware.CSRFProtection
 	// petLogger is the logger for pet-related operations
 	petLogger = logger.New("handlers")
 )
 
-// init initializes the pet cache and CSRF protection.
+// init initializes the pet cache.
 func init() {
 	petCache = cache.NewPetCache(1000, 5*time.Minute)
-	csrfProt = middleware.NewCSRFProtection()
 }
 
 // GetPetCache returns the global pet cache instance
@@ -799,21 +795,27 @@ func RatePet(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "id is required"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "id is required"}); err != nil {
+			petLogger.Debug("encode error", map[string]interface{}{"error": err})
+		}
 		return
 	}
 
 	var targetID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &targetID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "invalid id format"}); err != nil {
+			petLogger.Debug("encode error", map[string]interface{}{"error": err})
+		}
 		return
 	}
 
 	ratingStr := r.URL.Query().Get("rating")
 	if ratingStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "rating is required"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"error": "rating is required"}); err != nil {
+			petLogger.Debug("encode error", map[string]interface{}{"error": err})
+		}
 		return
 	}
 

@@ -46,7 +46,6 @@ func resetUsers() {
 		Role:      "user",
 		CreatedAt: time.Now(),
 	}
-	nextUserID = 4
 }
 
 func TestListUsersHandler(t *testing.T) {

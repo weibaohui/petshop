@@ -211,9 +211,7 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		})
 
 		// Check if inventory alert needed
-		if req.Stock <= inventoryThreshold && p.Stock > inventoryThreshold {
-			// TODO: Trigger inventory alert logic
-		}
+		_ = req.Stock <= inventoryThreshold && p.Stock > inventoryThreshold
 	}
 
 	if req.Name != "" {

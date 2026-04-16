@@ -223,7 +223,6 @@ func resetAdminData(t *testing.T) *sql.DB {
 		Status:   "active",
 		Role:     "user",
 	}
-	nextUserID = 3
 	userMu.Unlock()
 
 	// 重置系统配置

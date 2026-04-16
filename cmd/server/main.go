@@ -200,15 +200,6 @@ func requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 	return true
 }
 
-// requireMethodJSON checks if the request method matches with JSON content type
-func requireMethodJSON(w http.ResponseWriter, r *http.Request, method string) bool {
-	if r.Method != method {
-		methodNotAllowedJSON(w, method)
-		return false
-	}
-	return true
-}
-
 // routeHandler is a function that handles a specific route
 type routeHandler func(w http.ResponseWriter, r *http.Request)
 

@@ -12,31 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// resetCarousels resets carousel data to a known state for testing
-func resetCarousels() {
-	// Clear existing carousels
-	carousels, _ := carouselRepo.GetAll()
-	for _, c := range carousels {
-		_ = carouselRepo.Delete(c.ID)
-	}
-
-	// Create test carousels
-	_ = carouselRepo.Create(&models.Carousel{
-		ImageURL:  "https://example.com/static/carousel/banner1.jpg",
-		LinkURL:   "https://example.com/product/1",
-		SortOrder: 1,
-		Title:     "春季大促",
-		Status:    "active",
-	})
-	_ = carouselRepo.Create(&models.Carousel{
-		ImageURL:  "https://example.com/static/carousel/banner2.jpg",
-		LinkURL:   "https://example.com/product/2",
-		SortOrder: 2,
-		Title:     "夏季促销",
-		Status:    "inactive",
-	})
-}
-
 func TestListCarousels_Handler(t *testing.T) {
 	resetAdminData(t)
 

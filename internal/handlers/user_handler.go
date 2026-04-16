@@ -17,7 +17,6 @@ import (
 // In-memory user storage (kept for compatibility)
 var users = make(map[int64]*models.User)
 var userMu sync.RWMutex
-var nextUserID int64 = 1
 
 func init() {
 	// Initialize sample users
@@ -41,7 +40,6 @@ func init() {
 		Role:      "user",
 		CreatedAt: now,
 	}
-	nextUserID = 3
 	userMu.Unlock()
 }
 

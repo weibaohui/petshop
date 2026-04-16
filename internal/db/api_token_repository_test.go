@@ -162,7 +162,7 @@ func TestAPITokenRepository_List(t *testing.T) {
 	}
 
 	// Test pagination
-	tokens, total, err = repo.List(0, 2)
+	tokens, _, err = repo.List(0, 2)
 	if err != nil {
 		t.Fatalf("Failed to list tokens with pagination: %v", err)
 	}

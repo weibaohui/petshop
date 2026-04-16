@@ -37,9 +37,7 @@ func (e ValidationErrors) HasErrors() bool {
 }
 
 // Validator provides validation for structs
-type Validator struct {
-	errors ValidationErrors
-}
+type Validator struct{}
 
 // New creates a new Validator instance
 func New() *Validator {
